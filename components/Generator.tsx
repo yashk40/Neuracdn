@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -108,6 +109,7 @@ export default function HomePage() {
   const [cssCode, setCssCode] = useState("");
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<{ cdnUrl: string; githubUrl: string } | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -181,6 +183,7 @@ export default function HomePage() {
       fetchHistory(); // Refresh history
     } catch (err) {
       console.error("Error saving to Firestore:", err);
+      toast.error("Failed to sync with dashboard");
     }
   };
 
@@ -249,7 +252,13 @@ export default function HomePage() {
   const generateCode = async () => {
     if (!aiPrompt.trim()) return;
     setIsGenerating(true);
+    setLoadingMessage("Analyzing prompt...");
+
     try {
+      setTimeout(() => setLoadingMessage("Generating logic..."), 1500);
+      setTimeout(() => setLoadingMessage("Styling component..."), 3000);
+      setTimeout(() => setLoadingMessage("Polishing code..."), 4500);
+
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -258,10 +267,13 @@ export default function HomePage() {
       if (!res.ok) throw new Error("Generation failed");
       const data = await res.json();
       processCode(data.code);
+      toast.success("Component generated successfully!");
     } catch (err) {
       console.error(err);
+      toast.error("Generation failed. Please try again.");
     } finally {
       setIsGenerating(false);
+      setLoadingMessage("");
     }
   };
 
@@ -278,17 +290,20 @@ export default function HomePage() {
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       setUploadResult(data);
+      toast.success("Deployed to GitHub CDN!");
       // Save to Firebase after successful deployment
       await saveToFirebase(data.cdnUrl);
     } catch (err: any) {
       console.error(err);
+      toast.error("Cloud deployment failed");
     } finally {
       setIsUploading(false);
     }
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, label: string = "Content") => {
     navigator.clipboard.writeText(text);
+    toast.success(`${label} copied!`, { icon: <CheckCircle className="w-4 h-4 text-green-500" /> });
   };
 
   return (
@@ -420,7 +435,7 @@ export default function HomePage() {
                           className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xl hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
                         >
                           {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                          {isGenerating ? "CRAFTING" : "INITIALIZE"}
+                          {isGenerating ? loadingMessage.toUpperCase() || "CRAFTING" : "INITIALIZE"}
                         </button>
                       </div>
                     </div>
@@ -481,11 +496,11 @@ export default function HomePage() {
                           <div className="relative">
                             <input
                               readOnly
-                              value={uploadResult.cdnUrl}
+                              value={`<link rel="stylesheet" href="${uploadResult.cdnUrl}">`}
                               className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-3 text-[10px] md:text-xs font-mono pr-20"
                             />
                             <button
-                              onClick={() => copyToClipboard(uploadResult.cdnUrl)}
+                              onClick={() => copyToClipboard(`<link rel="stylesheet" href="${uploadResult.cdnUrl}">`, "CDN Link Tag")}
                               className="absolute right-2 top-1.5 p-1.5 bg-black text-white rounded-lg hover:scale-105 active:scale-95 transition-all"
                             >
                               <Copy className="w-3.5 h-3.5" />
@@ -582,7 +597,7 @@ export default function HomePage() {
                         <h3 className="text-base md:text-lg font-bold">Blueprint Markup</h3>
                       </div>
                       <button
-                        onClick={() => copyToClipboard(htmlCode)}
+                        onClick={() => copyToClipboard(htmlCode, "HTML Code")}
                         className="text-[10px] font-black uppercase text-zinc-400 hover:text-black tracking-widest transition-colors"
                       >
                         Copy
@@ -739,11 +754,11 @@ export default function HomePage() {
                   <div className="relative">
                     <input
                       readOnly
-                      value={selectedItem.cdnUrl || "Deploy to get link"}
+                      value={selectedItem.cdnUrl ? `<link rel="stylesheet" href="${selectedItem.cdnUrl}">` : "Deploy to get link"}
                       className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-4 text-xs font-mono text-zinc-600 pr-16"
                     />
                     <button
-                      onClick={() => copyToClipboard(selectedItem.cdnUrl || "")}
+                      onClick={() => copyToClipboard(selectedItem.cdnUrl ? `<link rel="stylesheet" href="${selectedItem.cdnUrl}">` : "", "CDN Link Tag")}
                       className="absolute right-3 top-3 p-2 bg-black text-white rounded-xl hover:scale-105 active:scale-95 transition-all"
                     >
                       <Copy className="w-4 h-4" />
@@ -764,7 +779,7 @@ export default function HomePage() {
                       className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl p-5 text-[11px] font-mono text-zinc-600 h-32 resize-none"
                     />
                     <button
-                      onClick={() => copyToClipboard(selectedItem.html)}
+                      onClick={() => copyToClipboard(selectedItem.html, "HTML Markup")}
                       className="absolute right-3 top-3 p-2 bg-black text-white rounded-xl hover:scale-105 active:scale-95 transition-all"
                     >
                       <Copy className="w-4 h-4" />
