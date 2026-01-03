@@ -8,7 +8,8 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
-    sendEmailVerification
+    sendEmailVerification,
+    updateProfile
 } from "firebase/auth";
 import { auth } from "../lib/firebase";
 
@@ -36,8 +37,9 @@ export function AuthProvider({ children }) {
         return signInWithPopup(auth, provider);
     };
 
-    const emailSignUp = async (email, password) => {
+    const emailSignUp = async (email, password, displayName) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, { displayName });
         await sendEmailVerification(userCredential.user);
         return userCredential;
     };

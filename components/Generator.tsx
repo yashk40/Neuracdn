@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
   Brain,
   Copy,
@@ -310,8 +311,8 @@ export default function HomePage() {
     <div className="flex min-h-screen bg-[#FAFAFA] font-poppins text-black">
       {/* Sidebar Navigation (Desktop) */}
       <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-20 bg-black flex-col items-center py-8 gap-10 z-50">
-        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-          <Brain className="w-6 h-6 text-black" />
+        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-2">
+          <Image src="/brain.svg" alt="Neura Logo" width={24} height={24} className="invert-0" />
         </div>
         <nav className="flex flex-col gap-6">
           <button
@@ -362,12 +363,12 @@ export default function HomePage() {
         <header className="h-16 md:h-20 border-b border-zinc-200 bg-white flex items-center justify-between px-6 md:px-10 shrink-0">
           <div className="flex items-center gap-3 md:gap-4">
             <h1 className="text-lg md:text-xl font-black tracking-tight uppercase">Neura Lab</h1>
-            <div className="h-4 md:h-6 w-[2px] bg-zinc-200" />
-            <div className="flex flex-col">
-              <span className="text-[10px] md:text-xs font-bold text-zinc-800">
+            <div className="h-6 md:h-8 w-[1px] bg-zinc-200" />
+            <div className="flex flex-col justify-center">
+              <span className="text-sm md:text-base font-bold text-zinc-900 leading-none mb-0.5">
                 {user ? `Hi, ${user.displayName || user.email?.split('@')[0]}` : "Generator"}
               </span>
-              <span className="text-[8px] md:text-[10px] font-medium text-zinc-400 uppercase tracking-widest">Workspace</span>
+              <span className="text-[10px] md:text-xs font-semibold text-zinc-400 uppercase tracking-widest leading-none">Workspace</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
