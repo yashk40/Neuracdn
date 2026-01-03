@@ -170,16 +170,20 @@
   }
 
   .hamburger-menu {
-    order: 2;
+    /* order: 2; - DOM order used instead */
   }
 
   .logo-container {
     position: static;
     transform: none;
-    order: 1;
+    /* order: 1; - DOM order used instead */
   }
 
   .card-nav-cta-button {
+    /* display: none; - moved to wrapper */
+  }
+
+  .desktop-only-cta {
     display: none;
   }
 
@@ -208,7 +212,8 @@
   }
 
   .card-nav.open .card-nav-content {
-    max-height: calc(100vh - 120px); /* Adjust based on your header height and desired spacing */
+    max-height: calc(100vh - 120px);
+    /* Adjust based on your header height and desired spacing */
     overflow-y: auto;
     padding-bottom: 1rem;
   }

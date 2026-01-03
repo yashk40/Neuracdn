@@ -139,6 +139,11 @@ const CardNav = ({
     <div className={`card-nav-container ${className}`}>
       <nav ref={navRef} className={`card-nav ${isExpanded ? 'open' : ''}`} style={{ backgroundColor: baseColor }}>
         <div className="card-nav-top">
+          <div className="logo-container flex items-center gap-2" >
+            <img src={logo} alt={logoAlt} className="logo" />
+            <span className="logo-text text-2xl font-bold" style={{ color: menuColor || '#000' }}>Neura CDN</span>
+          </div>
+
           <div
             className={`hamburger-menu ${isHamburgerOpen ? 'open' : ''}`}
             onClick={toggleMenu}
@@ -151,16 +156,13 @@ const CardNav = ({
             <div className="hamburger-line" />
           </div>
 
-          <div className="logo-container flex items-center gap-2" >
-            <img src={logo} alt={logoAlt} className="logo" />
-            <span className="logo-text text-2xl font-bold" style={{ color: menuColor || '#000' }}>Neura CDN</span>
+          <div className="desktop-only-cta">
+            <Link href="/auth">
+              <button className="card-nav-cta-button rounded-full" style={{ backgroundColor: buttonBgColor, color: buttonTextColor, width: '100px', height: '40px' }}>
+                Sign In
+              </button>
+            </Link>
           </div>
-
-          <Link href="/auth">
-            <button className="card-nav-cta-button rounded-full" style={{ backgroundColor: buttonBgColor, color: buttonTextColor, width: '100px', height: '40px' }}>
-              Sign In
-            </button>
-          </Link>
         </div>
 
         <div className="card-nav-content" aria-hidden={!isExpanded}>

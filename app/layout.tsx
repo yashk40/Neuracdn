@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
 import { Toaster } from "sonner"
+import SmoothScroll from "@/components/SmoothScroll"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -15,7 +16,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Neura CDN - Smart Component Delivery Network",
   description:
-    "Generate, compile, and deploy UI components instantly to GitHub CDN. Zero setup, live compilation, instant deployment.",
+    "The next generation content delivery network for AI-generated UI components. Fast, reliable, and developer-first.",
   generator: "v0.app",
   icons: {
     icon: [
@@ -44,6 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${poppins.variable} font-sans antialiased`}>
+        <SmoothScroll />
         <AuthProvider>
           {children}
           <Toaster position="top-right" richColors />
