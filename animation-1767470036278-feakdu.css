@@ -1,0 +1,55 @@
+.neura-card {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .neura-card:hover {
+            transform: translate(-50%, -50%) rotateX(10deg) rotateY(10deg);
+        }
+        .neura-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #ff69b4, #ffe000);
+            opacity: 0.1;
+            border-radius: 20px;
+        }
+        .neura-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #4c5154, #2f343a);
+            opacity: 0.1;
+            border-radius: 20px;
+            transform: rotate(180deg);
+        }
+        .neura-card-header {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+            z-index: 1;
+        }
+        .neura-card-description {
+            font-size: 16px;
+            color: #fff;
+            text-align: center;
+            z-index: 1;
+        }
