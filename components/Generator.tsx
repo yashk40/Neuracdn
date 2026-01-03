@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Play,
   Stars,
+  Loader2,
 } from "lucide-react";
 
 // =============================================
@@ -44,9 +45,9 @@ const flipCardStyles = `
     border-radius: 1.5rem;
     display: flex;
     flex-direction: column;
-    background: #1a1a1a;
-    border: 4px solid white;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    background: white;
+    border: 4px solid black;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
   }
   .flip-card-back {
     transform: rotateY(180deg);
@@ -69,13 +70,13 @@ const suggestions = [
 ];
 
 // =============================================
-// MAIN COMPONENT (NO FRAMER MOTION)
+// MAIN COMPONENT: DASHBOARD VERSION
 // =============================================
 export default function HomePage() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [htmlCode, setHtmlCode] = useState("");
   const [cssCode, setCssCode] = useState("");
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<{ cdnUrl: string; githubUrl: string } | null>(null);
@@ -89,8 +90,14 @@ export default function HomePage() {
 
   // Split AI code into HTML and CSS
   const processCode = (code: string) => {
+    // 1. Clean the code: Remove markdown code blocks and extraneous text
+    let cleanCode = code;
+
+    // Remove triple backticks and language identifiers
+    cleanCode = cleanCode.replace(/```(?:html|css)?/gi, "").replace(/```/g, "").trim();
+
     const parser = new DOMParser();
-    const doc = parser.parseFromString(code, "text/html");
+    const doc = parser.parseFromString(cleanCode, "text/html");
 
     // Extract CSS from style tags
     let css = "";
@@ -100,19 +107,18 @@ export default function HomePage() {
     });
 
     // If no style tags, check if it's raw CSS
-    if (!css.trim() && /{\s*[\w-]+\s*:/.test(code) && /@keyframes|animation/.test(code)) {
-      css = code;
-      setHtmlCode(""); // No HTML if it's pure CSS
+    if (!css.trim() && /{\s*[\w-]+\s*:/.test(cleanCode) && /@keyframes|animation/.test(cleanCode)) {
+      css = cleanCode;
+      setHtmlCode("");
     } else {
-      // Remove scripts
       doc.querySelectorAll("script").forEach((s) => s.remove());
       setHtmlCode(doc.body.innerHTML);
     }
 
     setCssCode(css.trim());
+    setActiveTab("preview");
   };
 
-  // Iframe preview boilerplate
   const htmlBoilerplate = `
     <!DOCTYPE html>
     <html lang="en">
@@ -122,21 +128,22 @@ export default function HomePage() {
       <style>
         body { 
           margin: 0; 
-          padding: 3rem; 
-          background: #111; 
-          color: white; 
+          padding: 2rem; 
+          background: white; 
+          color: black; 
           font-family: system-ui, sans-serif; 
           display: flex;
           justify-content: center;
           align-items: center;
           min-height: 100vh;
+          overflow: hidden;
         }
         ${cssCode}
       </style>
     </head>
     <body>
-      <div class="demo-area">
-        ${htmlCode || '<p class="text-center text-2xl text-gray-500">Your animation preview will appear here ✨</p>'}
+      <div id="preview-root">
+        ${htmlCode || '<div style="color: #666; font-size: 1.2rem; font-weight: 500;">Preview rendering area...</div>'}
       </div>
     </body>
     </html>
@@ -144,10 +151,7 @@ export default function HomePage() {
 
   // AI Generation
   const generateCode = async () => {
-    if (!aiPrompt.trim()) {
-      alert("Please describe what CSS animation you want!");
-      return;
-    }
+    if (!aiPrompt.trim()) return;
     setIsGenerating(true);
     try {
       const res = await fetch("/api/generate", {
@@ -159,7 +163,6 @@ export default function HomePage() {
       const data = await res.json();
       processCode(data.code);
     } catch (err) {
-      alert("Error generating code. Check console or API key.");
       console.error(err);
     } finally {
       setIsGenerating(false);
@@ -168,32 +171,18 @@ export default function HomePage() {
 
   // GitHub Upload
   const uploadToGitHub = async () => {
-    if (!cssCode.trim()) {
-      alert("No valid CSS found to upload!");
-      return;
-    }
-
+    if (!cssCode.trim()) return;
     setIsUploading(true);
     try {
       const res = await fetch("/api/github", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName,
-          content: cssCode,
-        }),
+        body: JSON.stringify({ fileName, content: cssCode }),
       });
-
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Upload failed");
-      }
-
+      if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       setUploadResult(data);
-      setTimeout(() => setIsFlipped(true), 1000);
     } catch (err: any) {
-      alert("Upload failed: " + err.message);
       console.error(err);
     } finally {
       setIsUploading(false);
@@ -202,225 +191,272 @@ export default function HomePage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
   };
 
   return (
-    <>
-      <style jsx global>{flipCardStyles}</style>
-
-      <div className="min-h-screen bg-[#121212] relative overflow-hidden text-white">
-        {/* Background Effects */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply blur-3xl opacity-30 animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply blur-3xl opacity-30 animate-pulse"></div>
+    <div className="flex min-h-screen bg-[#FAFAFA] font-poppins text-black">
+      {/* Sidebar Navigation */}
+      <aside className="fixed left-0 top-0 bottom-0 w-20 bg-black flex flex-col items-center py-8 gap-10 z-50">
+        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
+          <Brain className="w-6 h-6 text-black" />
         </div>
+        <nav className="flex flex-col gap-6">
+          <button className="p-3 bg-zinc-800 rounded-xl text-white shadow-lg shadow-black/20">
+            <Zap className="w-6 h-6" />
+          </button>
+          <button className="p-3 text-zinc-500 hover:text-white transition-colors">
+            <Code className="w-6 h-6" />
+          </button>
+          <button className="p-3 text-zinc-500 hover:text-white transition-colors">
+            <Rocket className="w-6 h-6" />
+          </button>
+        </nav>
+      </aside>
 
-        <div className="relative z-10 container mx-auto px-6 py-10 max-w-7xl">
-          {/* Header */}
-          <div className="flex items-center gap-5 mb-12">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-white to-transparent rounded-3xl blur-lg opacity-70"></div>
-              <div className="relative p-5 bg-gradient-to-r from-[#121212] to-white rounded-3xl">
-                <Brain className="w-12 h-12 text-white" />
-              </div>
-            </div>
-            <div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                Neura CDN
-              </h1>
-              <p className="text-gray-400 text-lg">AI-Powered CSS Animation Platform</p>
+      {/* Main Dashboard Workspace */}
+      <main className="pl-20 flex-1 flex flex-col h-screen">
+        {/* Top Professional Header */}
+        <header className="h-20 border-b border-zinc-200 bg-white flex items-center justify-between px-10 shrink-0">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-black tracking-tight uppercase">Neura Lab</h1>
+            <div className="h-6 w-[2px] bg-zinc-200" />
+            <span className="text-sm font-medium text-zinc-400">Generator / Workshop</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-2 bg-zinc-100 rounded-full flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-xs font-bold text-zinc-600">AI AGENT ONLINE</span>
             </div>
           </div>
+        </header>
 
-          <div className="grid lg:grid-cols-2 gap-10">
-            {/* Left Column */}
-            <div className="space-y-10">
-              {/* Prompt Section */}
-              <div className="bg-[#1a1a1a] border-4 border-white rounded-3xl p-10 shadow-2xl">
-                <h2 className="text-4xl font-bold mb-4 flex items-center gap-4">
-                  <Zap className="w-10 h-10" /> Neura V.01
-                </h2>
-                <p className="text-gray-300 mb-8 text-lg">Describe your animation vision</p>
+        {/* Content Scroll Area */}
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <div className="max-w-7xl mx-auto w-full grid grid-cols-12 gap-8">
 
-                <textarea
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="Example: Create a glowing neon button with hover pulse effect"
-                  rows={5}
-                  className="w-full px-6 py-5 bg-white/5 border-2 border-white/30 rounded-2xl text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none resize-none text-lg"
-                />
+            {/* Left Column: Input & Controls */}
+            <div className="col-span-12 lg:col-span-5 space-y-8">
 
-                <div className="flex flex-wrap gap-4 mt-8">
-                  {suggestions.map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        setAiPrompt(s);
-                        generateCode();
-                      }}
-                      disabled={isGenerating}
-                      className="px-6 py-3 bg-white text-black rounded-xl font-semibold hover:scale-105 transition disabled:opacity-60"
-                    >
-                      {s}
-                    </button>
-                  ))}
+              {/* AI Prompt Panel */}
+              <section className="bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-black rounded-lg">
+                      <Stars className="w-5 h-5 text-white" />
+                    </div>
+                    <h3 className="text-lg font-bold">Dynamic Generator</h3>
+                  </div>
+                  <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">v1.2</span>
                 </div>
 
-                <button
-                  onClick={generateCode}
-                  disabled={isGenerating}
-                  className="w-full mt-10 py-6 text-2xl font-bold bg-white text-black rounded-3xl hover:scale-105 transition shadow-2xl flex items-center justify-center gap-4"
-                >
-                  {isGenerating ? (
-                    <>
-                      <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
-                      AI Crafting...
-                    </>
-                  ) : (
-                    <>
-                      <Stars className="w-8 h-8" />
-                      Generate with AI Magic
-                    </>
-                  )}
-                </button>
-              </div>
+                <div className="relative group">
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="E.g., A button that drips like liquid on hover..."
+                    className="w-full h-40 bg-zinc-50 border border-zinc-200 rounded-2xl p-5 text-sm font-medium focus:ring-2 focus:ring-black outline-none transition-all resize-none"
+                  />
+                  <div className="absolute bottom-4 right-4 flex gap-2">
+                    <button
+                      onClick={generateCode}
+                      disabled={isGenerating || !aiPrompt}
+                      className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xl hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                    >
+                      {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                      {isGenerating ? "CRAFTING" : "INITIALIZE"}
+                    </button>
+                  </div>
+                </div>
 
-              {/* CSS Editor */}
-              <div className="bg-[#1a1a1a] border-4 border-white rounded-3xl p-10 shadow-2xl">
-                <h3 className="text-3xl font-bold mb-8 flex items-center gap-4">
-                  <Code className="w-9 h-9" /> CSS Code Editor
-                </h3>
-                <textarea
-                  value={cssCode}
-                  onChange={(e) => setCssCode(e.target.value)}
-                  placeholder="AI-generated CSS appears here..."
-                  rows={20}
-                  className="w-full font-mono text-sm bg-gray-900/70 border border-white/20 rounded-xl px-6 py-5 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none resize-none"
-                />
+                <div className="mt-8 flex flex-col gap-3">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Suggestions</span>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.slice(0, 2).map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setAiPrompt(s); }}
+                        className="text-[11px] font-semibold bg-white border border-zinc-200 px-4 py-2 rounded-full hover:border-black transition-colors"
+                      >
+                        {s.split("with")[0]}...
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </section>
 
-                <button
-                  onClick={uploadToGitHub}
-                  disabled={isUploading || !cssCode}
-                  className="w-full mt-8 py-6 text-2xl font-bold bg-white text-black rounded-3xl hover:scale-105 transition shadow-2xl relative overflow-hidden flex items-center justify-center gap-4"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
-                  {isUploading ? (
-                    <>
-                      <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Rocket className="w-9 h-9" />
-                      Deploy to GitHub CDN
-                    </>
-                  )}
-                </button>
-              </div>
+              {/* Deployment & Results Panel */}
+              <section className="bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-black rounded-lg">
+                    <Rocket className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold">Cloud Deployment</h3>
+                </div>
+
+                {!uploadResult ? (
+                  <div className="space-y-6">
+                    <div className="p-6 border-2 border-dashed border-zinc-100 rounded-2xl flex flex-col items-center justify-center text-center">
+                      <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center mb-4 text-zinc-300">
+                        <Rocket className="w-6 h-6" />
+                      </div>
+                      <p className="text-xs text-zinc-400 font-medium">Ready to deploy generated CSS to Github CDN</p>
+                    </div>
+                    <button
+                      onClick={uploadToGitHub}
+                      disabled={isUploading || !cssCode}
+                      className="w-full py-4 bg-black text-white rounded-2xl font-black text-xs tracking-widest hover:bg-zinc-800 disabled:opacity-20 transition-all flex items-center justify-center gap-3"
+                    >
+                      {isUploading && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {isUploading ? "DEPLOYING TO CLOUD" : "PUSH TO PRODUCTION"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6 animate-in fade-in zoom-in duration-500">
+                    <div className="bg-zinc-50 border border-black p-5 rounded-2xl space-y-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-black" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Status: Deployed</span>
+                      </div>
+                      <div className="relative">
+                        <input
+                          readOnly
+                          value={uploadResult.cdnUrl}
+                          className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-3 text-xs font-mono pr-20"
+                        />
+                        <button
+                          onClick={() => copyToClipboard(uploadResult.cdnUrl)}
+                          className="absolute right-2 top-1.5 p-1.5 bg-black text-white rounded-lg hover:scale-105 active:scale-95 transition-all"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setUploadResult(null)}
+                      className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest hover:text-black mx-auto block"
+                    >
+                      New Deployment Profile
+                    </button>
+                  </div>
+                )}
+              </section>
+
             </div>
 
-            {/* Right Column - Flip Card */}
-            <div className="relative">
-              <div className={`flip-card ${isFlipped ? "flipped" : ""}`}>
-                <div className="flip-card-inner">
-                  {/* Front: Usage */}
-                  <div className="flip-card-front">
-                    <div className="p-10 h-full flex flex-col">
-                      <h3 className="text-3xl font-bold mb-8 flex items-center gap-4">
-                        <FileText className="w-9 h-9" /> How to use it?
-                      </h3>
-                      <textarea
-                        value={htmlCode}
-                        readOnly
-                        rows={18}
-                        className="flex-1 font-mono text-sm bg-gray-900/70 border border-white/20 rounded-xl px-6 py-5 text-white resize-none"
-                        placeholder="HTML usage appears here..."
-                      />
-                      <button
-                        onClick={() => setIsFlipped(true)}
-                        disabled={!htmlCode && !cssCode}
-                        className="mt-8 py-6 text-2xl font-bold bg-white text-black rounded-3xl hover:scale-105 transition shadow-2xl flex items-center justify-center gap-4"
-                      >
-                        <Play className="w-8 h-8" />
-                        Try it Live
-                      </button>
-                    </div>
-                  </div>
+            {/* Right Column: Visualizer & Source */}
+            <div className="col-span-12 lg:col-span-7 space-y-8">
 
-                  {/* Back: Live Preview */}
-                  <div className="flip-card-back">
-                    <div className="p-10 h-full flex flex-col">
-                      <h3 className="text-3xl font-bold mb-8 flex items-center gap-4">
-                        <Zap className="w-9 h-9" /> Live Preview
-                      </h3>
-                      <div className="flex-1 bg-white rounded-2xl overflow-hidden shadow-2xl">
-                        {(htmlCode || cssCode) ? (
+              {/* Main Visualizer Panel */}
+              <section className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm flex flex-col min-h-[600px]">
+                <div className="h-16 border-b border-zinc-100 flex items-center justify-between px-8 bg-zinc-50/50">
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setActiveTab("preview")}
+                      className={`px-5 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === "preview" ? "bg-black text-white shadow-lg" : "text-zinc-500 hover:text-black"}`}
+                    >
+                      LIVE PREVIEW
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("code")}
+                      className={`px-5 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === "code" ? "bg-black text-white shadow-lg" : "text-zinc-500 hover:text-black"}`}
+                    >
+                      SOURCE CODE
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-zinc-200" />
+                    <div className="w-3 h-3 rounded-full bg-zinc-200" />
+                    <div className="w-3 h-3 rounded-full bg-zinc-200" />
+                  </div>
+                </div>
+
+                <div className="flex-1 relative">
+                  {activeTab === "preview" ? (
+                    <div className="absolute inset-0 bg-[#f8f8f8] p-8 flex items-center justify-center">
+                      <div className="w-full h-full bg-white rounded-2xl border border-zinc-200 shadow-inner overflow-hidden relative">
+                        {cssCode || htmlCode ? (
                           <iframe
-                            title="Live Preview"
+                            title="Visualizer"
                             srcDoc={htmlBoilerplate}
-                            sandbox="allow-scripts"
                             className="w-full h-full"
+                            sandbox="allow-scripts"
                           />
                         ) : (
-                          <div className="h-full flex items-center justify-center bg-gray-100 text-gray-600">
-                            <div className="text-center">
-                              <Zap className="w-20 h-20 mx-auto mb-6 opacity-40" />
-                              <p className="text-2xl">Generate CSS to preview ✨</p>
-                            </div>
+                          <div className="flex flex-col items-center justify-center h-full text-zinc-300">
+                            <Zap className="w-16 h-16 mb-4 animate-pulse" />
+                            <p className="text-sm font-medium">Awaiting AI generation results...</p>
                           </div>
                         )}
                       </div>
-                      <button
-                        onClick={() => setIsFlipped(false)}
-                        className="mt-8 py-6 text-2xl font-bold bg-white text-black rounded-3xl hover:scale-105 transition shadow-2xl flex items-center justify-center gap-4"
-                      >
-                        <ArrowLeft className="w-8 h-8" />
-                        Back to Usage
-                      </button>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="absolute inset-0 bg-zinc-900 p-8">
+                      <div className="w-full h-full overflow-hidden flex flex-col gap-4">
+                        <div className="flex-1">
+                          <div className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                            CSS Module
+                          </div>
+                          <textarea
+                            value={cssCode}
+                            onChange={(e) => setCssCode(e.target.value)}
+                            className="w-full h-full bg-transparent text-zinc-100 font-mono text-xs outline-none p-4 custom-scrollbar border border-zinc-800 rounded-xl"
+                            placeholder="/* Generated styles will appear here */"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
-          </div>
+              </section>
 
-          {/* Success Banner - Simple show/hide (no animation) */}
-          {uploadResult && (
-            <div className="mt-12 bg-[#1a1a1a] border-4 border-green-500/60 rounded-3xl p-10 shadow-2xl shadow-green-500/30">
-              <h3 className="text-4xl font-bold mb-8 flex items-center gap-5 text-green-400">
-                <CheckCircle className="w-12 h-12" /> Deployment Successful!
-              </h3>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-xl mb-3">CDN URL (ready to use):</label>
-                  <div className="flex gap-4">
-                    <input
-                      value={uploadResult.cdnUrl}
-                      readOnly
-                      className="flex-1 px-6 py-4 bg-white/10 border border-green-500/50 rounded-xl text-green-300 font-mono"
-                    />
-                    <button
-                      onClick={() => copyToClipboard(uploadResult.cdnUrl)}
-                      className="px-8 py-4 bg-green-500/20 border border-green-500 text-green-400 rounded-xl hover:bg-green-500/40 transition flex items-center gap-3"
-                    >
-                      <Copy className="w-6 h-6" /> Copy
-                    </button>
+              {/* HTML Markup Panel */}
+              <section className="bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-black rounded-lg">
+                      <FileText className="w-5 h-5 text-white" />
+                    </div>
+                    <h3 className="text-lg font-bold">Blueprint Markup</h3>
                   </div>
-                </div>
-                <div className="text-center">
                   <button
-                    onClick={() => setIsFlipped(true)}
-                    className="px-10 py-5 bg-green-500 hover:bg-green-600 text-white text-xl font-bold rounded-xl flex items-center gap-4 mx-auto"
+                    onClick={() => copyToClipboard(htmlCode)}
+                    className="text-[10px] font-black uppercase text-zinc-400 hover:text-black tracking-widest transition-colors"
                   >
-                    <Play className="w-8 h-8" /> View Live Demo
+                    Copy Structure
                   </button>
                 </div>
-              </div>
+                <div className="relative">
+                  <div className="absolute top-4 right-4 text-[10px] font-bold text-zinc-300 pointer-events-none">TEMPLATES / JSX</div>
+                  <textarea
+                    readOnly
+                    value={htmlCode}
+                    className="w-full h-32 bg-zinc-50 border border-zinc-100 rounded-2xl p-6 font-mono text-[11px] text-zinc-600 outline-none resize-none"
+                    placeholder="<div className='neura-element'>...</div>"
+                  />
+                </div>
+              </section>
+
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    </>
+      </main>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e4e4e7;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #d4d4d8;
+        }
+      `}</style>
+    </div>
   );
 }

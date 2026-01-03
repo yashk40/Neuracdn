@@ -157,7 +157,7 @@ const CardNav = ({
           </div>
 
           <Link href="/auth">
-            <button className="card-nav-cta-button rounded-full" style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}>
+            <button className="card-nav-cta-button rounded-full" style={{ backgroundColor: buttonBgColor, color: buttonTextColor, width: '100px', height: '40px' }}>
               Sign In
             </button>
           </Link>
