@@ -25,7 +25,7 @@ export default function AuthPage() {
             setLoading(true);
             setError("");
             await googleSignIn();
-            router.push("/");
+            router.push("/dashboard");
         } catch (err) {
             setError("Failed to sign in with Google.");
             console.error(err);
@@ -47,7 +47,7 @@ export default function AuthPage() {
             setLoading(true);
             if (isLogin) {
                 await emailSignIn(email, password);
-                router.push("/");
+                router.push("/dashboard");
             } else {
                 await emailSignUp(email, password);
                 setMessage("Account created! Check your email for verification.");
@@ -160,7 +160,7 @@ export default function AuthPage() {
                             <div className="space-y-1.5">
                                 <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 ml-1">Email</label>
                                 <Input
-                                      style={{
+                                    style={{
                                         color: "black",
                                     }}
                                     type="email"
@@ -196,9 +196,9 @@ export default function AuthPage() {
                                 <div className="space-y-1.5">
                                     <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 ml-1">Confirm Password</label>
                                     <Input
-                                          style={{
-                                        color: "black",
-                                    }}
+                                        style={{
+                                            color: "black",
+                                        }}
                                         type="password"
                                         placeholder="••••••••"
                                         value={confirmPassword}

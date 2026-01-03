@@ -30,7 +30,7 @@ export function Header() {
                 Sign In
               </Button>
             </Link>
-            <Link href="/demo">
+            <Link href="/dashboard">
               <Button size="sm">Get Started</Button>
             </Link>
           </div>

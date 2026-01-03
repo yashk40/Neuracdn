@@ -32,7 +32,7 @@ export function Hero() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/demo">
+            <Link href="/dashboard">
               <Button size="lg" className="group">
                 Generate Your First Component
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
