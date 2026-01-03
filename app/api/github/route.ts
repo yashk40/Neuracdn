@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
 
         // Use environment variables for sensitive GitHub credentials if possible, 
         // but ensuring functionality if they are missing by returning error.
-        const GITHUB_TOKEN = "ghp_2X2WnW16H0qZpYF5V2X2WnW16H0qZpYF5";
+        const GITHUB_TOKEN = "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";
         const GITHUB_REPO = "yashk40/NeuraCDN";
 
         if (!GITHUB_TOKEN || !GITHUB_REPO) {
