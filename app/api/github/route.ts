@@ -6,8 +6,8 @@ export async function POST(req: NextRequest) {
 
         // Use environment variables for sensitive GitHub credentials if possible, 
         // but ensuring functionality if they are missing by returning error.
-        const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-        const GITHUB_REPO = process.env.GITHUB_REPO;
+        const GITHUB_TOKEN = "ghp_2X2WnW16H0qZpYF5V2X2WnW16H0qZpYF5";
+        const GITHUB_REPO = "yashk40/NeuraCDN";
 
         if (!GITHUB_TOKEN || !GITHUB_REPO) {
             return new Response("Missing GitHub credentials in .env", { status: 500 });
