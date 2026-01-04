@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 // use your own icon import if react-icons is not available
 import { GoArrowUpRight } from 'react-icons/go';
 import './CardNav.css';
+import { useAuth } from '@/context/AuthContext';
 
 const CardNav = ({
   logo,
@@ -22,6 +23,8 @@ const CardNav = ({
   const navRef = useRef(null);
   const cardsRef = useRef([]);
   const tlRef = useRef(null);
+
+  const { user } = useAuth();
 
   const calculateHeight = () => {
     const navEl = navRef.current;
@@ -157,9 +160,9 @@ const CardNav = ({
           </div>
 
           <div className="desktop-only-cta">
-            <Link href="/auth">
-              <button className="card-nav-cta-button rounded-full" style={{ backgroundColor: buttonBgColor, color: buttonTextColor, width: '100px', height: '40px' }}>
-                Sign In
+            <Link href={user ? "/dashboard" : "/auth"}>
+              <button className="card-nav-cta-button rounded-full" style={{ backgroundColor: buttonBgColor, color: buttonTextColor, width: '120px', height: '40px' }}>
+                {user ? "Dashboard" : "Sign In"}
               </button>
             </Link>
           </div>
@@ -184,6 +187,24 @@ const CardNav = ({
               </div>
             </div>
           ))}
+
+          {/* Mobile Auth Buttons */}
+          <div className="mobile-auth-section">
+            {user ? (
+              <Link href="/dashboard" className="mobile-auth-btn primary">
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/auth" className="mobile-auth-btn secondary">
+                  Sign In
+                </Link>
+                <Link href="/auth" className="mobile-auth-btn primary">
+                  Sign Up
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </nav>
     </div>

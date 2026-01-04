@@ -164,3 +164,7 @@
     @apply bg-background text-foreground font-poppins;
   } */
 }
+
+body{
+  overflow-x: hidden;
+}
