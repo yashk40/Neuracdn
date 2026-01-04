@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
         const { fileName, content } = await req.json();
 
         // HARDCODED CREDENTIALS (WARNING: Replace this token if it stops working)
-        const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+        const GITHUB_TOKEN = "owiaeteahgeligherghlerug";
         const GITHUB_REPO = "yashk40/Mycdnuploader";
 
         if (!GITHUB_TOKEN) {
