@@ -236,7 +236,14 @@ export default function HomePage() {
           justify-content: center;
           align-items: center;
           min-height: 100vh;
-          overflow: hidden;
+        }
+        #preview-root {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
         }
         ${cssCode}
       </style>
@@ -392,7 +399,7 @@ export default function HomePage() {
         </header>
 
         {/* Content Scroll Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar pb-32 md:pb-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar pb-32 md:pb-8" data-lenis-prevent>
           {currentView === "generator" ? (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
               <div className="max-w-7xl mx-auto w-full grid grid-cols-12 gap-6 md:gap-8">

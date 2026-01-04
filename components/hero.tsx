@@ -1,10 +1,23 @@
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Sparkles } from "lucide-react"
 import Link from "next/link"
+// @ts-ignore
+import Silk from "./Silk"
 
 export function Hero() {
   return (
     <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="relative w-full h-full">
+          <Silk
+            speed={5}
+            scale={1}
+            color="#3a3a3aff"
+            noiseIntensity={1.5}
+            rotation={0}
+          />
+        </div>
+      </div>
       {/* Grid background */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
 
