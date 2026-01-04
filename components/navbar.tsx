@@ -8,9 +8,9 @@ const items = [
     bgColor: "#0D0716",
     textColor: "#fff",
     links: [
-      { label: "Company", href: "#company", ariaLabel: "About Company" },
-      { label: "Careers", href: "#careers", ariaLabel: "About Careers" },
-      { label: "Blog", href: "#blog", ariaLabel: "Our Blog" }
+      { label: "Company", href: "/about", ariaLabel: "About Company" },
+      { label: "Careers", href: "/careers", ariaLabel: "About Careers" },
+      { label: "Blog", href: "/blog", ariaLabel: "Our Blog" }
     ]
   },
   {
@@ -18,8 +18,8 @@ const items = [
     bgColor: "#170D27",
     textColor: "#fff",
     links: [
-      { label: "Features", href: "#features", ariaLabel: "Key Features" },
-      { label: "Documentation", href: "#docs", ariaLabel: "Read our Documentation" }
+      { label: "Features", href: "/features", ariaLabel: "Key Features" },
+      { label: "Documentation", href: "/docs", ariaLabel: "Read our Documentation" }
     ]
   },
   {
@@ -27,9 +27,7 @@ const items = [
     bgColor: "#271E37",
     textColor: "#fff",
     links: [
-      { label: "Email", href: "mailto:contact@neuracdn.com", ariaLabel: "Email us" },
-      { label: "Twitter", href: "https://twitter.com/neuracdn", ariaLabel: "Twitter" },
-      { label: "LinkedIn", href: "https://linkedin.com/company/neuracdn", ariaLabel: "LinkedIn" }
+      { label: "Email", href: "mailto:contact@neuracdn.com", ariaLabel: "Email us" }
     ]
   }
 ];
