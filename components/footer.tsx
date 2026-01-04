@@ -17,7 +17,7 @@ export function Footer() {
           <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
           <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
           <div className="flex items-center gap-3 ml-2 border-l border-border pl-5">
-            <a href="#" className="hover:text-foreground transition-colors" aria-label="GitHub">
+            <a href="https://github.com/yashk40/Neuracdn" className="hover:text-foreground transition-colors" aria-label="GitHub">
               <Github className="h-4 w-4" />
             </a>
             <a href="#" className="hover:text-foreground transition-colors" aria-label="Twitter">

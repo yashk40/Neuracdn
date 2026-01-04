@@ -19,8 +19,15 @@ export default function AuthPage() {
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const { googleSignIn, emailSignUp, emailSignIn } = useAuth();
+    const { googleSignIn, emailSignUp, emailSignIn, user, loading: authLoading } = useAuth();
     const router = useRouter();
+
+    // Redirect if already logged in
+    React.useEffect(() => {
+        if (!authLoading && user) {
+            router.replace("/dashboard");
+        }
+    }, [user, authLoading, router]);
 
     const handleGoogleSignIn = async () => {
         try {
