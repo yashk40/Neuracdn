@@ -77,7 +77,7 @@ export default function AuthPage() {
             {/* Left side: Branding (Hidden on mobile) */}
             <div className="hidden lg:flex lg:w-1/2 bg-black flex-col justify-between p-12 relative overflow-hidden">
                 <div className="relative z-10 flex items-center gap-3">
-                    <Image src="/brain.svg" alt="Neura Logo" width={40} height={40} className="invert" />
+                    <Image src="/logo.png" alt="Neura Logo" width={40} height={40} className="invert" />
                     <h1 className="text-2xl font-black tracking-[0.2em] text-white">NEURA</h1>
                 </div>
 
@@ -100,7 +100,7 @@ export default function AuthPage() {
             {/* Right side: Auth Form */}
             <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 md:p-8 lg:p-12 relative overflow-hidden">
                 <div className="lg:hidden absolute top-8 left-8 z-10 flex items-center gap-2">
-                    <Image src="/brain.svg" alt="Neura Logo" width={32} height={32} />
+                    <Image src="/logo.png" alt="Neura Logo" width={32} height={32} />
                     <h1 className="text-2xl font-bold-400 text-black">NEURA CDN</h1>
                 </div>
 

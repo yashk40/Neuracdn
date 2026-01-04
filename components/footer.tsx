@@ -6,7 +6,7 @@ export function Footer() {
       <div className="container mx-auto px-4 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <img src="/brain.svg" width={18} height={18} className="bg-white p-0.5 rounded-full" />
+            <img src="/logo.png" width={18} height={18} className="bg-white p-0.5 rounded-full" />
             <span className="font-semibold">Neura CDN</span>
           </div>
           <span className="text-muted-foreground hidden md:inline">•</span>

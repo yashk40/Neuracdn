@@ -4,13 +4,12 @@ export async function POST(req: NextRequest) {
     try {
         const { fileName, content } = await req.json();
 
-        // Use environment variables for sensitive GitHub credentials if possible, 
-        // but ensuring functionality if they are missing by returning error.
+        // HARDCODED CREDENTIALS (WARNING: Replace this token if it stops working)
         const GITHUB_TOKEN = "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";
         const GITHUB_REPO = "yashk40/Mycdnuploader";
 
-        if (!GITHUB_TOKEN || !GITHUB_REPO) {
-            return new Response("Missing GitHub credentials in .env", { status: 500 });
+        if (!GITHUB_TOKEN) {
+            return new Response("Missing GitHub credentials", { status: 500 });
         }
 
         const [owner, repo] = GITHUB_REPO.split("/");
