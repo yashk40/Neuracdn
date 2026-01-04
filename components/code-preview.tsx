@@ -4,38 +4,34 @@ import { useState, useEffect } from "react"
 
 const codeSteps = [
   {
-    title: "API Request",
-    code: `fetch('https://api.neura-cdn.com/generate', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    component: 'Button',
-    variant: 'primary',
-    framework: 'react'
-  })
-})`,
+    title: "Generate via API",
+    code: `curl -X POST https://api.neura-cdn.com/v1/generate \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "prompt": "Modern glow button",
+    "style": "glassmorphism",
+    "theme": "dark"
+  }'`,
   },
   {
-    title: "Live Compilation",
-    code: `● Generating component...
-● Running TypeScript checks...
-✓ Type checking complete
-● Bundling with esbuild...
-✓ Bundle optimized (2.1kb)
-● Deploying to GitHub CDN...
-✓ Deployed successfully`,
+    title: "Instant Live Build",
+    code: `● Parsing natural language...
+● Generating CSS modules...
+✓ CSS optimized (1.2kb)
+● Generating HTML structure...
+✓ Structure validated
+● Pushing to Edge CDN...
+✓ Deployed: cdn.neura.io/assets/8f92a.css`,
   },
   {
-    title: "Use in Your Project",
-    code: `import Button from 'https://cdn.neura.io/button'
+    title: "Drop into Project",
+    code: `<!-- 1. Include the CDN link -->
+<link rel="stylesheet" href="https://cdn.neura.io/assets/8f92a.css">
 
-export default function App() {
-  return (
-    <Button className="px-6 py-3 rounded-lg">
-      Click me
-    </Button>
-  )
-}`,
+<!-- 2. Use the markup -->
+<button class="neura-btn-glow">
+  <span>Launch Sequence</span>
+</button>`,
   },
 ]
 
@@ -67,17 +63,15 @@ export function CodePreview() {
                   <button
                     key={step.title}
                     onClick={() => setActiveStep(index)}
-                    className={`w-full text-left p-4 rounded-lg border transition-all ${
-                      activeStep === index
-                        ? "border-foreground bg-card"
-                        : "border-border bg-transparent hover:border-foreground/40"
-                    }`}
+                    className={`w-full text-left p-4 rounded-lg border transition-all ${activeStep === index
+                      ? "border-foreground bg-card"
+                      : "border-border bg-transparent hover:border-foreground/40"
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-mono transition-colors ${
-                          activeStep === index ? "border-foreground bg-foreground text-background" : "border-border"
-                        }`}
+                        className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-mono transition-colors ${activeStep === index ? "border-foreground bg-foreground text-background" : "border-border"
+                          }`}
                       >
                         {index + 1}
                       </div>
@@ -99,7 +93,7 @@ export function CodePreview() {
                     <div className="w-3 h-3 rounded-full bg-border" />
                   </div>
                   <span className="text-xs ml-2 font-mono text-muted-foreground">
-                    {codeSteps[activeStep].title.toLowerCase().replace(/\s+/g, "-")}.ts
+                    {activeStep === 0 ? "request.sh" : activeStep === 1 ? "build.log" : "index.html"}
                   </span>
                 </div>
 

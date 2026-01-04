@@ -17,7 +17,6 @@ export const metadata: Metadata = {
   title: "Neura CDN - Smart Component Delivery Network",
   description:
     "The next generation content delivery network for AI-generated UI components. Fast, reliable, and developer-first.",
-  generator: "v0.app",
   icons: {
     icon: [
       {

@@ -6,7 +6,7 @@ import Silk from "./Silk"
 
 export function Hero() {
   return (
-    <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden">
+    <section className="relative min-h-screen flex flex-col justify-center pt-24 pb-20 lg:pt-32 lg:pb-32 overflow-hidden">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="relative w-full h-full">
           <Silk
@@ -31,7 +31,7 @@ export function Hero() {
 
           {/* Main headline */}
           <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-6 text-balance">
-            Components from API to CDN in{" "}
+            Components from AI to CDN in{" "}
             <span className="inline-block bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
               seconds
             </span>
@@ -39,7 +39,7 @@ export function Hero() {
 
           {/* Description */}
           <p className="text-lg lg:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto text-balance leading-relaxed">
-            Generate UI components via API, watch them compile in real-time, and deploy instantly to GitHub CDN. Zero
+            Generate UI components via AI, watch them compile in real-time, and deploy instantly to GitHub CDN. Zero
             setup. Zero config. Just ready-to-use components.
           </p>
 
@@ -51,13 +51,10 @@ export function Hero() {
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
-            <Button size="lg" variant="outline">
-              View Documentation
-            </Button>
           </div>
 
           {/* Code snippet */}
-          <div className="mt-16 max-w-2xl mx-auto">
+          {/* <div className="mt-16 max-w-2xl mx-auto">
             <div className="rounded-lg border border-border bg-card p-6 text-left font-mono text-sm overflow-x-auto">
               <div className="flex items-center gap-2 mb-4 text-muted-foreground">
                 <div className="flex gap-1.5">
@@ -78,7 +75,7 @@ export function Hero() {
                 <div className="text-foreground/80">✓ Deployed: https://cdn.neura.io/components/login-form</div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </section>
