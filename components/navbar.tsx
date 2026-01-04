@@ -43,7 +43,7 @@ const items = [
 export function Navbar() {
   return (
     <CardNav
-      logo="/brain.svg"
+      logo="/logo.png"
       logoAlt="Neura CDN Logo"
       items={items}
       baseColor="#fff"
