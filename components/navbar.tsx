@@ -27,7 +27,8 @@ const items = [
     bgColor: "#271E37",
     textColor: "#fff",
     links: [
-      { label: "Email", href: "mailto:contact@neuracdn.com", ariaLabel: "Email us" }
+      { label: "Email", href: "mailto:contact@neuracdn.com", ariaLabel: "Email us" },
+      { label: "GitHub", href: "https://github.com/yashk40/Neuracdn", ariaLabel: "GitHub Repository" }
     ]
   }
 ];
