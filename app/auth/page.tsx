@@ -27,7 +27,7 @@ export default function AuthPage() {
             setLoading(true);
             setError("");
             await googleSignIn();
-            router.push("/dashboard");
+            router.replace("/dashboard");
         } catch (err) {
             setError("Failed to sign in with Google.");
             console.error(err);
@@ -49,7 +49,7 @@ export default function AuthPage() {
             setLoading(true);
             if (isLogin) {
                 await emailSignIn(email, password);
-                router.push("/dashboard");
+                router.replace("/dashboard");
             } else {
                 await emailSignUp(email, password, username);
                 setMessage("Account created! Check your email for verification.");

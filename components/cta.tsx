@@ -19,7 +19,7 @@ export function CTA() {
 
             <div className="relative">
               <div className="w-16 h-16 rounded-full bg-foreground text-background flex items-center justify-center mx-auto mb-6">
-                <Terminal className="h-8 w-8" />
+                <img src="./brain.svg" style={{ width: "60%", height: "60%" }} />
               </div>
 
               <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-6 text-balance">
@@ -38,14 +38,7 @@ export function CTA() {
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </Link>
-                <Button size="lg" variant="outline">
-                  Read the Docs
-                </Button>
               </div>
-
-              <p className="text-sm text-muted-foreground mt-8">
-                No credit card required • Free tier available • 5 min setup
-              </p>
             </div>
           </div>
         </div>
