@@ -47,7 +47,7 @@ Your goal is to generate a premium, production-ready CSS animation component.
 }
 
 const groq = new Groq({
-    apiKey: "90809809",
+    apiKey: process.env.GROQ_API_KEY,
 });
 
 export async function POST(request: NextRequest) {
