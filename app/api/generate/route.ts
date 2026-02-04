@@ -115,7 +115,7 @@ Your goal is to generate a premium, production-ready UI component using **Bootst
 }
 
 const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY,
+    apiKey: process.env.GROQ_APII_KEY,
 });
 
 export async function POST(request: NextRequest) {
