@@ -4,9 +4,8 @@ export async function POST(req: NextRequest) {
     try {
         const { fileName, content } = await req.json();
 
-        // HARDCODED CREDENTIALS (WARNING: Replace this token if it stops working)
         const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-        const GITHUB_REPO = "yashk40/Mycdnuploader";
+        const GITHUB_REPO = "neuracdn/CDN";
 
         if (!GITHUB_TOKEN) {
             return new Response("Missing GitHub credentials", { status: 500 });
@@ -16,6 +15,23 @@ export async function POST(req: NextRequest) {
 
         const url = `https://api.github.com/repos/${owner}/${repo}/contents/${fileName}`;
 
+        // Check if file exists to get SHA
+        let sha: string | undefined;
+        try {
+            const getRes = await fetch(url, {
+                headers: {
+                    "Authorization": `Bearer ${GITHUB_TOKEN}`,
+                    "Accept": "application/vnd.github.v3+json",
+                },
+            });
+            if (getRes.ok) {
+                const getData = await getRes.json();
+                sha = getData.sha;
+            }
+        } catch (e) {
+            console.error("Error fetching file SHA:", e);
+        }
+
         const res = await fetch(url, {
             method: "PUT",
             headers: {
@@ -24,9 +40,10 @@ export async function POST(req: NextRequest) {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                message: "Upload CSS animation via Neura CDN",
+                message: sha ? "Update CSS animation via Neura CDN" : "Upload CSS animation via Neura CDN",
                 content: Buffer.from(content).toString("base64"),
                 branch: "main",
+                sha: sha, // Include SHA if updating
             }),
         });
 

@@ -44,7 +44,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${poppins.variable} font-sans antialiased`}>
-        <SmoothScroll />
+        {/* <SmoothScroll /> */}
         <AuthProvider>
           {children}
           <Toaster position="top-right" richColors />
