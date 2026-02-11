@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 // Using lucide-react which is already in package.json
-import { Loader2, Mail, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, Mail, CheckCircle, AlertCircle, Github } from "lucide-react";
 
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -19,7 +19,7 @@ export default function AuthPage() {
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const { googleSignIn, emailSignUp, emailSignIn, user, loading: authLoading } = useAuth();
+    const { googleSignIn, githubSignIn, emailSignUp, emailSignIn, user, loading: authLoading } = useAuth();
     const router = useRouter();
 
     // Redirect if already logged in
@@ -37,6 +37,20 @@ export default function AuthPage() {
             router.replace("/dashboard");
         } catch (err) {
             setError("Failed to sign in with Google.");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGithubSignIn = async () => {
+        try {
+            setLoading(true);
+            setError("");
+            await githubSignIn();
+            router.replace("/dashboard");
+        } catch (err) {
+            setError("Failed to sign in with GitHub.");
             console.error(err);
         } finally {
             setLoading(false);
@@ -251,6 +265,20 @@ export default function AuthPage() {
                                 </svg>
                             )}
                             Sign in with Google
+                        </button>
+
+                        <button
+                            style={{ boxShadow: "#121212 0px 0px 4px", cursor: "pointer" }}
+                            className="w-full bg-[#24292F] text-white hover:bg-[#2F363D] h-12 font-semibold text-sm transition-all duration-200 rounded-2xl flex items-center justify-center gap-3 border border-zinc-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+                            onClick={handleGithubSignIn}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                            ) : (
+                                <Github className="h-5 w-5" />
+                            )}
+                            Sign in with GitHub
                         </button>
 
                         <div className="text-center pt-2">
