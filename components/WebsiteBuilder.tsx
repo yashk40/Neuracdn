@@ -383,7 +383,7 @@ export default function WebsiteBuilder() {
                 // Step 1: Trigger Neura AI and get response ID
                 let responseId: string | null = null;
                 try {
-                    const promptRes = await fetch(`http://srv1358945.hstgr.cloud:4000/prompt?prompt=${encodeURIComponent(fullPrompt)}`);
+                    const promptRes = await fetch(`/api/neura/prompt?prompt=${encodeURIComponent(fullPrompt)}`);
                     if (promptRes.ok) {
                         const promptData = await promptRes.json();
                         responseId = promptData.id || promptData.responseId || null;
@@ -398,7 +398,7 @@ export default function WebsiteBuilder() {
                 } catch (e: any) {
                     console.error("Neura AI trigger failed:", e);
                     setIsGenerating(false);
-                    setGenerationError("Failed to connect to localhost:4000. Make sure the Neura AI server is running.");
+                    setGenerationError("Failed to connect to Neura AI Service.");
                     setAgentStates(prev => {
                         const newState = { ...prev };
                         Object.keys(newState).forEach(k => { if (newState[k] === "working") newState[k] = "error"; });
@@ -426,7 +426,7 @@ export default function WebsiteBuilder() {
                     }
 
                     try {
-                        const pollRes = await fetch(`http://srv1358945.hstgr.cloud:4000/response?id=${responseId}`);
+                        const pollRes = await fetch(`/api/neura/response?id=${responseId}`);
                         if (!pollRes.ok) return;
 
                         const data = await pollRes.json();
