@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Bot,
     Layers,
@@ -22,7 +22,11 @@ import {
     Image as ImageIcon,
     X,
     ChevronRight,
+    Save,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -43,9 +47,14 @@ const AgentNode = ({ title, description, status, icon, delay = 0 }: AgentNodePro
       ${status === "working" ? "bg-black border-black text-white shadow-xl scale-105 z-10" : ""}
       ${status === "completed" ? "bg-green-50 border-green-200 text-zinc-800" : ""}
     `}>
-            <div className="flex items-start gap-4">
+            {/* Shimmer Effect for Working State */}
+            {status === "working" && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-[200%] animate-shimmer pointer-events-none" />
+            )}
+
+            <div className="flex items-start gap-4 relative z-10">
                 <div className={`
-          p-3 rounded-2xl flex items-center justify-center shrink-0
+          p-3 rounded-2xl flex items-center justify-center shrink-0 transition-colors duration-300
           ${status === "working" ? "bg-zinc-800" : "bg-zinc-100"}
           ${status === "completed" ? "bg-green-100 text-green-600" : ""}
         `}>
@@ -54,6 +63,16 @@ const AgentNode = ({ title, description, status, icon, delay = 0 }: AgentNodePro
                 <div>
                     <h4 className={`text-sm font-bold mb-1 ${status === "working" ? "text-white" : "text-zinc-900"}`}>{title}</h4>
                     <p className={`text-xs ${status === "working" ? "text-zinc-400" : "text-zinc-500"}`}>{description}</p>
+
+                    {/* Processing Indicator */}
+                    {status === "working" && (
+                        <div className="mt-2 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.3s]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.15s]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce" />
+                            <span className="text-[10px] font-bold text-emerald-500 ml-1 uppercase tracking-wider">Thinking</span>
+                        </div>
+                    )}
                 </div>
                 {status === "completed" && (
                     <div className="absolute top-4 right-4">
@@ -92,10 +111,64 @@ const designVibes = [
     {
         name: "Modern Corporate Sleek",
         description: "Deep indigos and slate grays, professional gradients, structured grid layouts, and high-quality photography placeholders.",
+    },
+
+    // 🔥 Soft Themes Added Below
+
+    {
+        name: "Soft Pastel Dream",
+        description: "Very light pastel gradients (peach, lavender, mint), soft shadows, airy spacing, and gentle rounded corners for a dreamy calming feel.",
+    },
+    {
+        name: "Creamy Neutral",
+        description: "Warm beige, cream, and light taupe tones with subtle shadows and elegant serif + sans-serif font pairing.",
+    },
+    {
+        name: "Soft Lavender UI",
+        description: "Muted lavender and light violet tones, smooth hover animations, soft glow highlights, and minimal contrast design.",
+    },
+    {
+        name: "Muted Earthy Calm",
+        description: "Soft sage green, dusty blue, clay brown accents with organic spacing and calm typography.",
+    },
+    {
+        name: "Soft Gradient Blur",
+        description: "Light blended gradients with blur overlays, minimal borders, smooth transitions, and floating UI components.",
+    },
+    {
+        name: "Warm Sunset Glow",
+        description: "Soft orange-pink gradients, diffused glow effects, rounded cards, and emotional storytelling layout.",
+    },
+    {
+        name: "Soft SaaS Dashboard",
+        description: "Light gray backgrounds, subtle card elevations, pastel accent colors, minimal icons, and smooth micro-interactions.",
+    },
+    {
+        name: "Light Aqua Calm",
+        description: "Soft aqua and sky-blue shades, minimal typography, clean white surfaces, and relaxed spacing.",
+    },
+    {
+        name: "Soft Monochrome",
+        description: "Single-color palette with different lightness variations, subtle depth shadows, and ultra-clean UI components.",
+    },
+    {
+        name: "Elegant Soft Shadow",
+        description: "Very soft layered shadows, neutral backgrounds, floating elements, and smooth fade-in animations.",
+    },
+    {
+        name: "Blush Modern",
+        description: "Light blush pink with warm neutrals, soft rounded buttons, thin borders, and calm professional vibe.",
+    },
+    {
+        name: "Soft Scandinavian",
+        description: "White + light wood tones, muted blue-gray accents, clean grid system, and cozy minimal aesthetic.",
     }
 ];
 
+
 export default function WebsiteBuilder() {
+    const { user } = useAuth();
+    const [isSaving, setIsSaving] = useState(false);
     const [prompt, setPrompt] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedHtml, setGeneratedHtml] = useState("");
@@ -109,6 +182,9 @@ export default function WebsiteBuilder() {
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isFrameworkDropdownOpen, setIsFrameworkDropdownOpen] = useState(false);
+    const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
+    const [selectedTheme, setSelectedTheme] = useState<string>("random"); // "random" or theme name or "none"
+    const [thinkingMode, setThinkingMode] = useState(false); // Thinking mode toggle
 
     // Agent States
     const [agentStates, setAgentStates] = useState({
@@ -164,7 +240,60 @@ export default function WebsiteBuilder() {
         }
     };
 
-    const generateComponent = async (section: string, sectionPrompt: string, vibe: typeof designVibes[0]) => {
+    const toggleThinkingMode = async () => {
+        const newMode = !thinkingMode;
+        setThinkingMode(newMode);
+
+        try {
+            const mode = newMode ? 'on' : 'off';
+            await fetch(`/api/neura/thinking?mode=${mode}`);
+            toast.success(`Thinking mode ${mode === 'on' ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            console.error('Failed to toggle thinking mode:', error);
+            toast.error('Failed to toggle thinking mode');
+            setThinkingMode(!newMode); // Revert on error
+        }
+    };
+
+    // Auto-disable thinking mode on component mount
+    useEffect(() => {
+        const disableThinkingMode = async () => {
+            try {
+                await fetch('/api/neura/thinking?mode=off');
+            } catch (error) {
+                console.error('Failed to disable thinking mode on mount:', error);
+            }
+        };
+        disableThinkingMode();
+    }, []);
+
+    const saveWebsite = async () => {
+        if (!user) {
+            toast.error("Please login to save websites");
+            return;
+        }
+        if (!generatedHtml) return;
+
+        setIsSaving(true);
+        try {
+            await addDoc(collection(db, "websites"), {
+                userId: user.uid,
+                prompt: prompt,
+                html: generatedHtml,
+                framework: selectedFramework,
+                theme: selectedTheme !== "random" && selectedTheme !== "none" ? selectedTheme : (selectedTheme === "random" ? "Random Theme" : "No Theme"),
+                createdAt: serverTimestamp(),
+            });
+            toast.success("Website saved to library!");
+        } catch (error) {
+            console.error("Error saving website:", error);
+            toast.error("Failed to save website");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const generateComponent = async (section: string, sectionPrompt: string, vibe: typeof designVibes[0], image?: string | null) => {
         try {
             const res = await fetch("/api/generate", {
                 method: "POST",
@@ -178,7 +307,8 @@ export default function WebsiteBuilder() {
                 Context: The user wants a website described as: "${prompt}". 
                 Use ${selectedFramework === 'css' ? 'Vanilla CSS' : selectedFramework === 'tailwind' ? 'Tailwind CSS' : 'Bootstrap 5'}.`,
                     framework: selectedFramework,
-                    model: selectedModel
+                    model: selectedModel,
+                    image: image // Pass image if available
                 }),
             });
             if (!res.ok) throw new Error(`Failed to generate ${section}`);
@@ -223,25 +353,59 @@ export default function WebsiteBuilder() {
 
         let finalPrompt = prompt;
 
-        // Image Analysis
+        // Image Handling
+        let visionPrompt = "";
+        let directImageBase64: string | null = null;
+
         if (selectedImage) {
-            toast.info("Analyzing image...");
-            try {
-                const visionFormData = new FormData();
-                visionFormData.append("image", selectedImage);
-                const visionRes = await fetch("/api/vision", { method: "POST", body: visionFormData });
-                if (!visionRes.ok) throw new Error("Vision analysis failed");
-                const visionData = await visionRes.json();
-                finalPrompt = `(Context from image: ${visionData.prompt}) ${prompt}`;
-                toast.success("Image analyzed!");
-            } catch (err) {
-                toast.error("Image analysis failed. Using text prompt only.");
+            if (selectedModel === "gpt-4o-mini") {
+                // For GPT-4o-mini, use Direct Image support (skip vision API)
+                try {
+                    const reader = new FileReader();
+                    directImageBase64 = await new Promise((resolve, reject) => {
+                        reader.onload = () => resolve(reader.result as string);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(selectedImage);
+                    });
+                    toast.info("Image attached for direct analysis by GPT-4o-mini");
+                } catch (e) {
+                    console.error("Failed to convert image", e);
+                    toast.error("Failed to process image");
+                }
+            } else {
+                // For other models, use Vision API to get a text description
+                toast.info("Analyzing image...");
+                try {
+                    const visionFormData = new FormData();
+                    visionFormData.append("image", selectedImage);
+                    const visionRes = await fetch("/api/vision", { method: "POST", body: visionFormData });
+                    if (!visionRes.ok) throw new Error("Vision analysis failed");
+                    const visionData = await visionRes.json();
+                    visionPrompt = `(Context from image: ${visionData.prompt}) `;
+                    toast.success("Image analyzed!");
+                } catch (err) {
+                    toast.error("Image analysis failed. Using text prompt only.");
+                }
             }
         }
 
-        // Randomly pick a vibe
-        const selectedVibe = designVibes[Math.floor(Math.random() * designVibes.length)];
-        toast(`Applying ${selectedVibe.name} design style...`, { icon: <Sparkles className="w-4 h-4" /> });
+        finalPrompt = `${visionPrompt}${prompt}`;
+
+        // Theme Selection Logic
+        let selectedVibe: typeof designVibes[0];
+        if (selectedTheme === "random") {
+            // Randomly pick a vibe
+            selectedVibe = designVibes[Math.floor(Math.random() * designVibes.length)];
+            toast(`Applying ${selectedVibe.name} design style...`, { icon: <Sparkles className="w-4 h-4" /> });
+        } else if (selectedTheme === "none") {
+            // No theme - neutral generation
+            selectedVibe = { name: "No Theme", description: "Clean, minimal design with neutral colors and standard layouts." };
+            toast("Generating with no specific theme...", { icon: <Sparkles className="w-4 h-4" /> });
+        } else {
+            // Use specific selected theme
+            selectedVibe = designVibes.find(v => v.name === selectedTheme) || designVibes[0];
+            toast(`Applying ${selectedVibe.name} design style...`, { icon: <Sparkles className="w-4 h-4" /> });
+        }
 
         // Reset States
         setAgentStates({
@@ -269,7 +433,7 @@ export default function WebsiteBuilder() {
 
                 // Start the generation process and polling simultaneously
                 const startTime = Date.now();
-                const timeoutLimit = 600000; // 10 minutes in milliseconds
+                const timeoutLimit = 1000000; // 15 minutes in milliseconds
 
                 let frameworkInstruction = "";
                 if (selectedFramework === "css") {
@@ -299,8 +463,8 @@ export default function WebsiteBuilder() {
                             Object.keys(newState).forEach(k => { if (newState[k] === "working") newState[k] = "error"; });
                             return newState;
                         });
-                        setGenerationError("Generation timed out after 10 minutes. No matching response found.");
-                        toast.error("Timeout: No matching prompt found within 10 minutes.");
+                        setGenerationError("Generation timed out after 15 minutes. No matching response found.");
+                        toast.error("Timeout: No matching prompt found within 15 minutes.");
                         return;
                     }
 
@@ -473,37 +637,37 @@ export default function WebsiteBuilder() {
 
             // Step 1: Header Agent
             setAgentStates(prev => ({ ...prev, header: "working" }));
-            const headerData = await generateComponent("Header", "Create a premium, responsive navigation header with logo, navigation links, and a call-to-action button. Ensure it looks professional and modern.", selectedVibe);
+            const headerData = await generateComponent("Header", "Create a premium, responsive navigation header with logo, navigation links, and a call-to-action button. Ensure it looks professional and modern.", selectedVibe, directImageBase64);
             setParts(prev => ({ ...prev, header: headerData.body }));
             setAgentStates(prev => ({ ...prev, header: "completed" }));
 
             // Step 2: Hero Agent
             setAgentStates(prev => ({ ...prev, hero: "working" }));
-            const heroData = await generateComponent("Hero", "Create a high-converting hero section with a compelling headline, subheadline, and primary/secondary CTA buttons. Use a modern layout with plenty of whitespace. **IMPORTANT: Include a premium animated background using Vanta.js. Add a wrapper div with id='vanta-bg' and provide a script to initialize VANTA.NET or VANTA.WAVES on that element. Ensure the background fills the section and the content is readable on top.**", selectedVibe);
+            const heroData = await generateComponent("Hero", "Create a high-converting hero section with a compelling headline, subheadline, and primary/secondary CTA buttons. Use a modern layout with plenty of whitespace. **IMPORTANT: Include a premium animated background using Vanta.js. Add a wrapper div with id='vanta-bg' and provide a script to initialize VANTA.NET or VANTA.WAVES on that element. Ensure the background fills the section and the content is readable on top.**", selectedVibe, directImageBase64);
             setParts(prev => ({ ...prev, hero: heroData.body }));
             setAgentStates(prev => ({ ...prev, hero: "completed" }));
 
             // Step 3: Features Agent
             setAgentStates(prev => ({ ...prev, features: "working" }));
-            const featuresData = await generateComponent("Features", "Create a robust 'Features' section with a section title, subtitle, and a responsive grid of 3-6 feature cards. Each card must have a unique icon/emoji, bold title, and descriptive text. Use hover effects and proper spacing.", selectedVibe);
+            const featuresData = await generateComponent("Features", "Create a robust 'Features' section with a section title, subtitle, and a responsive grid of 3-6 feature cards. Each card must have a unique icon/emoji, bold title, and descriptive text. Use hover effects and proper spacing.", selectedVibe, directImageBase64);
             setParts(prev => ({ ...prev, features: featuresData.body }));
             setAgentStates(prev => ({ ...prev, features: "completed" }));
 
             // Step 4: Testimonials Agent (New)
             setAgentStates(prev => ({ ...prev, testimonials: "working" }));
-            const testimonialsData = await generateComponent("Testimonials", "Create a 'Testimonials' section (Social Proof). Include a section header and a grid/flex layout of 3 client review cards. Each card shows a quote, user avatar/emoji, name, and role. Make it trust-inspiring.", selectedVibe);
+            const testimonialsData = await generateComponent("Testimonials", "Create a 'Testimonials' section (Social Proof). Include a section header and a grid/flex layout of 3 client review cards. Each card shows a quote, user avatar/emoji, name, and role. Make it trust-inspiring.", selectedVibe, directImageBase64);
             setParts(prev => ({ ...prev, testimonials: testimonialsData.body }));
             setAgentStates(prev => ({ ...prev, testimonials: "completed" }));
 
             // Step 5: CTA Agent (New)
             setAgentStates(prev => ({ ...prev, cta: "working" }));
-            const ctaData = await generateComponent("CallToAction", "Create a high-impact 'Call to Action' (CTA) section. It should have a bold background color, a compelling headline asking the user to start now, and a large button. Ensure high contrast and center alignment.", selectedVibe);
+            const ctaData = await generateComponent("CallToAction", "Create a high-impact 'Call to Action' (CTA) section. It should have a bold background color, a compelling headline asking the user to start now, and a large button. Ensure high contrast and center alignment.", selectedVibe, directImageBase64);
             setParts(prev => ({ ...prev, cta: ctaData.body }));
             setAgentStates(prev => ({ ...prev, cta: "completed" }));
 
             // Step 6: Footer Agent
             setAgentStates(prev => ({ ...prev, footer: "working" }));
-            const footerData = await generateComponent("Footer", "Create a comprehensive website footer. Include multiple columns: Brand info (logo + text), Quick Links, Resources, and a Newsletter subscription form. Add copyright and social links at the bottom.", selectedVibe);
+            const footerData = await generateComponent("Footer", "Create a comprehensive website footer. Include multiple columns: Brand info (logo + text), Quick Links, Resources, and a Newsletter subscription form. Add copyright and social links at the bottom.", selectedVibe, directImageBase64);
             setParts(prev => ({ ...prev, footer: footerData.body }));
             setAgentStates(prev => ({ ...prev, footer: "completed" }));
 
@@ -544,8 +708,9 @@ export default function WebsiteBuilder() {
 <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 <style>
 body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
-::-webkit-scrollbar { display: none; }
-html { -ms-overflow-style: none; scrollbar-width: none; }
+::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; -webkit-appearance: none !important; background: transparent !important; }
+html, body { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+html { scroll-behavior: smooth; }
 .vanta-canvas { position: absolute; top: 0; left: 0; z-index: -1; width: 100%; height: 100%; }
 </style>
 ${headContent}
@@ -727,6 +892,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return (
         <div className="flex flex-col lg:flex-row h-full gap-6">
+            <style jsx global>{`
+                @keyframes shimmer { 
+                    from { transform: translateX(-100%); } 
+                    to { transform: translateX(50%); } 
+                }
+                .animate-shimmer { 
+                    animation: shimmer 2s infinite linear; 
+                }
+            `}</style>
             {/* Mobile Tab Switcher */}
             <div className="lg:hidden flex p-1 bg-zinc-100 rounded-xl mb-2 shrink-0">
                 <button
@@ -747,38 +921,38 @@ document.addEventListener('DOMContentLoaded', () => {
             <div className={`w-full lg:w-1/3 flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar ${mobileTab === 'builder' ? 'flex' : 'hidden lg:flex'}`}>
                 {/* Input Area */}
                 <div className="bg-white rounded-[2.5rem] p-6 border border-zinc-200 shadow-sm shrink-0">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-black rounded-lg">
-                                <Sparkles className="w-5 h-5 text-white" />
+                    <div className="mb-5">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="p-1.5 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg">
+                                <Sparkles className="w-4 h-4 text-white" />
                             </div>
-                            <h3 className="font-bold text-lg">Orchestrator</h3>
+                            <h3 className="font-bold text-base">Neura Website Builder</h3>
                         </div>
-                        <div className="flex flex-col gap-2">
-                            {/* Static Model Badge */}
-                            <div className="bg-black text-white px-3 py-1.5 rounded-lg flex items-center justify-between text-[10px] font-bold shadow-sm border border-zinc-900 cursor-default opacity-90 hover:opacity-100 transition-opacity min-w-[120px]">
-                                <span className="flex items-center gap-1.5">
-                                    <Bot className="w-3 h-3 text-emerald-400" />
-                                    Neura AI
-                                </span>
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+
+                        {/* Controls Row */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {/* Neura AI Badge */}
+                            <div className="bg-gradient-to-r from-emerald-500 to-green-500 text-white px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm">
+                                <Bot className="w-3 h-3" />
+                                <span>Neura AI</span>
+                                <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
                             </div>
 
-                            {/* Custom Framework Dropdown */}
-                            <div className="relative min-w-[120px]">
+                            {/* Framework Dropdown */}
+                            <div className="relative">
                                 <button
                                     onClick={() => !isGenerating && setIsFrameworkDropdownOpen(!isFrameworkDropdownOpen)}
-                                    className={`w-full bg-white border px-3 py-1.5 rounded-lg flex items-center justify-between text-[10px] font-bold shadow-sm outline-none transition-all ${isFrameworkDropdownOpen ? "border-black ring-2 ring-zinc-100" : "border-zinc-200 hover:border-zinc-300"}`}
+                                    className={`bg-white border px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm outline-none transition-all ${isFrameworkDropdownOpen ? "border-black ring-1 ring-zinc-200" : "border-zinc-200 hover:border-zinc-300"}`}
                                 >
                                     <span className="truncate">
                                         {selectedFramework === "css" ? "Raw CSS" : selectedFramework === "tailwind" ? "Tailwind" : "Bootstrap"}
                                     </span>
                                     <ChevronRight
-                                        className={`w-3 h-3 text-zinc-400 transition-transform duration-200 ${isFrameworkDropdownOpen ? "-rotate-90" : "rotate-90"}`}
+                                        className={`w-2.5 h-2.5 text-zinc-400 transition-transform duration-200 ${isFrameworkDropdownOpen ? "-rotate-90" : "rotate-90"}`}
                                     />
                                 </button>
                                 {isFrameworkDropdownOpen && (
-                                    <div className="absolute top-full mt-1 left-0 w-full bg-white border border-zinc-200 rounded-lg shadow-xl overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="absolute top-full mt-1 left-0 w-full bg-white border border-zinc-200 rounded-md shadow-xl overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-100">
                                         {[
                                             { id: "css", label: "Raw CSS" },
                                             { id: "tailwind", label: "Tailwind" },
@@ -787,7 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <button
                                                 key={fw.id}
                                                 onClick={() => { setSelectedFramework(fw.id as any); setIsFrameworkDropdownOpen(false); }}
-                                                className={`w-full text-left px-3 py-2 text-[10px] font-medium transition-colors hover:bg-zinc-50 ${selectedFramework === fw.id ? "text-black font-bold bg-zinc-50" : "text-zinc-500"}`}
+                                                className={`w-full text-left px-2.5 py-1.5 text-[9px] font-medium transition-colors hover:bg-zinc-50 ${selectedFramework === fw.id ? "text-black font-bold bg-zinc-50" : "text-zinc-500"}`}
                                             >
                                                 {fw.label}
                                             </button>
@@ -795,8 +969,22 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 )}
                             </div>
+
+                            {/* Thinking Mode Toggle */}
+                            <button
+                                onClick={toggleThinkingMode}
+                                disabled={isGenerating}
+                                className={`border px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm outline-none transition-all ${thinkingMode ? "bg-purple-500 border-purple-600 text-white" : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"} disabled:opacity-50`}
+                            >
+                                <Sparkles className="w-2.5 h-2.5" />
+                                <span>Thinking</span>
+                                <span className={`text-[7px] font-extrabold ${thinkingMode ? "text-purple-100" : "text-zinc-400"}`}>
+                                    {thinkingMode ? "ON" : "OFF"}
+                                </span>
+                            </button>
                         </div>
                     </div>
+
                     <div className="relative">
                         <textarea
                             value={prompt}
@@ -831,6 +1019,50 @@ document.addEventListener('DOMContentLoaded', () => {
                             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                             {isGenerating ? "BUILDING..." : "GENERATE"}
                         </button>
+                    </div>
+
+                    {/* Theme Selection - Positioned below textarea */}
+                    <div className="mt-4">
+                        <label className="text-xs font-bold text-zinc-600 mb-2 block">Design Theme</label>
+                        <div className="relative">
+                            <button
+                                onClick={() => !isGenerating && setIsThemeDropdownOpen(!isThemeDropdownOpen)}
+                                className={`w-full bg-white border px-4 py-2.5 rounded-xl flex items-center justify-between text-sm font-medium shadow-sm outline-none transition-all ${isThemeDropdownOpen ? "border-black ring-2 ring-zinc-100" : "border-zinc-200 hover:border-zinc-300"}`}
+                            >
+                                <span className="truncate">
+                                    {selectedTheme === "random" ? "🎲 Random Theme" : selectedTheme === "none" ? "⚪ No Theme" : selectedTheme}
+                                </span>
+                                <ChevronRight
+                                    className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${isThemeDropdownOpen ? "-rotate-90" : "rotate-90"}`}
+                                />
+                            </button>
+                            {isThemeDropdownOpen && (
+                                <div className="absolute top-full mt-2 left-0 w-full bg-white border border-zinc-200 rounded-xl shadow-2xl overflow-hidden z-30 animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
+                                    <button
+                                        onClick={() => { setSelectedTheme("random"); setIsThemeDropdownOpen(false); }}
+                                        className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50 ${selectedTheme === "random" ? "text-black font-bold bg-zinc-50" : "text-zinc-600"}`}
+                                    >
+                                        🎲 Random Theme
+                                    </button>
+                                    <button
+                                        onClick={() => { setSelectedTheme("none"); setIsThemeDropdownOpen(false); }}
+                                        className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50 ${selectedTheme === "none" ? "text-black font-bold bg-zinc-50" : "text-zinc-600"}`}
+                                    >
+                                        ⚪ No Theme
+                                    </button>
+                                    <div className="h-px bg-zinc-200 my-1" />
+                                    {designVibes.map((theme) => (
+                                        <button
+                                            key={theme.name}
+                                            onClick={() => { setSelectedTheme(theme.name); setIsThemeDropdownOpen(false); }}
+                                            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50 ${selectedTheme === theme.name ? "text-black font-bold bg-zinc-50" : "text-zinc-600"}`}
+                                        >
+                                            {theme.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -898,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             {/* RIGHT PANEL: PREVIEW */}
-            <div className={`w-full lg:w-2/3 bg-zinc-100 rounded-[2.5rem] border border-zinc-200 overflow-hidden flex-col shadow-inner h-[650px] lg:min-h-0 ${mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'}`}>
+            <div className={`w-full lg:w-2/3 bg-zinc-100 rounded-[2.5rem] border border-zinc-200 overflow-hidden flex-col shadow-inner h-[630px] lg:min-h-0 ${mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'}`}>
                 {/* Preview Header */}
                 <div className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 shrink-0">
                     <div className="flex items-center gap-2">
@@ -943,7 +1175,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </button>
                     </div>
-                    <div className="w-20" /> {/* Spacer for balance */}
+                    <Button
+                        onClick={saveWebsite}
+                        disabled={isSaving || !generatedHtml}
+                        className="bg-black text-white hover:bg-zinc-800 transition-all rounded-lg px-4 py-1.5 h-auto text-xs font-bold flex items-center gap-2"
+                    >
+                        {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        Save
+                    </Button>
                 </div>
 
                 {/* Content Area */}
@@ -961,12 +1200,38 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             ) : generatedHtml ? (
                                 <div className={`w-full h-full text-center transition-all duration-1000 ease-out flex justify-center items-center ${showPreview ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-                                    <iframe
-                                        title="Website Preview"
-                                        srcDoc={generatedHtml}
-                                        className={`border-0 bg-white shadow-lg transition-all duration-500 ${viewMode === "mobile" ? "w-[375px] h-full rounded-3xl border-8 border-zinc-900 my-4" : "w-full h-full rounded-xl"}`}
-                                        sandbox="allow-scripts allow-same-origin"
-                                    />
+                                    <div
+                                        className={`relative transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] bg-black shadow-2xl overflow-hidden
+                                            ${viewMode === "mobile"
+                                                ? "w-[260px] h-[520px] rounded-3xl ring-8 ring-black scale-100 origin-center"
+                                                : "w-full h-full rounded-xl ring-0 scale-100"}`}
+                                    >
+                                        {/* Screen Content */}
+                                        <div className={`w-full h-full overflow-hidden bg-white transition-all duration-500 ${viewMode === "mobile" ? "rounded-3xl" : "rounded-xl"}`}>
+                                            <iframe
+                                                title="Website Preview"
+                                                srcDoc={generatedHtml ? generatedHtml.replace('</head>', '<style>::-webkit-scrollbar { display: none !important; width: 0 !important; } body { -ms-overflow-style: none !important; scrollbar-width: none !important; }</style></head>') : ''}
+                                                className="w-full h-full border-0"
+                                                sandbox="allow-scripts allow-same-origin"
+                                            />
+                                        </div>
+
+                                        {/* Phone Notch - Only visible in mobile */}
+                                        <div
+                                            className={`absolute left-1/2 -translate-x-1/2 bg-black z-20 transition-all duration-500 ease-in-out -top-1 pointer-events-none
+                                            ${viewMode === "mobile"
+                                                    ? "w-full max-w-[50%] h-6 rounded-b-xl opacity-100"
+                                                    : "w-0 h-0 opacity-0"}`}
+                                        />
+
+                                        {/* Home Indicator - Only visible in mobile */}
+                                        <div
+                                            className={`absolute left-1/2 -translate-x-1/2 bg-black z-20 transition-all duration-500 ease-in-out bottom-1 pointer-events-none
+                                            ${viewMode === "mobile"
+                                                    ? "w-full max-w-[40%] h-1 rounded-full opacity-100"
+                                                    : "w-0 h-0 opacity-0"}`}
+                                        />
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-zinc-300 gap-4">

@@ -64,22 +64,15 @@ interface HistoryItem {
 }
 
 const suggestions = [
-  "Create a glowing neon button with hover pulse",
-  "Make a futuristic card with glassmorphism and hover tilt",
-  "Generate a smooth particle wave background animation",
-  "Design a bento-style feature grid with animated borders",
-  "Create a liquid-blob background with floating 3D icons",
-  "Build a neo-brutalist pricing table with sharp shadows",
+  "Create a contact form with validation",
+  "Make a responsive pricing table",
+  "Generate a navigation bar with dropdowns",
+  "Design a dashboard statistic card",
+  "Create a newsletter subscription section",
+  "Build a customer testimonial slider",
 ];
 
-const designVibes = [
-  { name: "Glassmorphism", description: "Translucent frosted glass effects, subtle borders, and soft colorful backgrounds with backdrop-filter: blur()." },
-  { name: "Neo-Brutalism", description: "Bold black borders, high contrast, vibrant primary colors, shadow offsets, and intentional raw/unpolished aesthetics." },
-  { name: "Futuristic Cyberpunk", description: "Dark backgrounds with neon accents (cyan, magenta, lime), glowing borders, digital scanline effects, and sharp geometric shapes." },
-  { name: "Minimalist Apple Style", description: "Large whitespace, subtle shadows, refined typography (sans-serif), soft grays, and extremely clean layout transitions." },
-  { name: "Organic & Playful", description: "Rounded corners, pastel color palettes, friendly typography, hand-drawn style icons, and soft blob-like decorative elements." },
-  { name: "Modern Corporate Sleek", description: "Deep indigos and slate grays, professional gradients, structured grid layouts, and high-quality photography placeholders." }
-];
+
 
 export default function HomePage() {
   const { user, logout } = useAuth();
@@ -96,6 +89,8 @@ export default function HomePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<{ cdnUrl: string; filename: string } | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [websiteHistory, setWebsiteHistory] = useState<any[]>([]); // Websites from Neura Website Builder
+  const [activeLibraryTab, setActiveLibraryTab] = useState<"components" | "websites">("components");
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [pendingFramework, setPendingFramework] = useState<"css" | "tailwind" | "bootstrap" | null>(null);
@@ -103,6 +98,8 @@ export default function HomePage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<"generator" | "showcase" | "website-beta">("generator");
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
+  const [selectedWebsite, setSelectedWebsite] = useState<any | null>(null);
+  const [viewingWebsite, setViewingWebsite] = useState<any | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isVisualEdit, setIsVisualEdit] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
@@ -110,7 +107,9 @@ export default function HomePage() {
   // Live edit panel: "split" = side-by-side, "editor" = full editor, "preview" = full preview
   const [liveEditLayout, setLiveEditLayout] = useState<"split" | "editor" | "preview">("split");
   const [deployMode, setDeployMode] = useState<"cdn" | "npm">("cdn");
+
   const [packageName, setPackageName] = useState("");
+  const [currentDocId, setCurrentDocId] = useState<string | null>(null);
 
   // Resizable Split State
   const [editorWidth, setEditorWidth] = useState(50);
@@ -204,7 +203,12 @@ export default function HomePage() {
   const ignoreHtmlUpdate = useRef<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Add key for refreshing iframe
 
-  useEffect(() => { if (user) fetchHistory(); }, [user]);
+  useEffect(() => {
+    if (user) {
+      fetchHistory();
+      fetchWebsiteHistory();
+    }
+  }, [user]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -221,15 +225,53 @@ export default function HomePage() {
   const saveToFirebase = async (cdnUrl?: string, customFileName?: string, deployType: 'cdn' | 'npm' = 'cdn', pkgName: string = "") => {
     if (!user || !cssCode) return;
     try {
-      await addDoc(collection(db, "users_database"), {
-        userId: user.uid, userName: user.displayName || user.email,
-        prompt: aiPrompt, html: htmlCode, css: cssCode,
-        cdnUrl: cdnUrl || "", fileName: customFileName || fileName,
-        deployType, packageName: pkgName, isPublic,
-        createdAt: serverTimestamp(),
-      });
+      if (currentDocId) {
+        const updatePayload: any = {
+          prompt: aiPrompt, html: htmlCode, css: cssCode,
+          deployType, isPublic
+        };
+        if (cdnUrl) {
+          updatePayload.cdnUrl = cdnUrl;
+          updatePayload.fileName = customFileName || fileName;
+        }
+        if (pkgName) {
+          updatePayload.packageName = pkgName;
+        }
+        await updateDoc(doc(db, "users_database", currentDocId), updatePayload);
+      } else {
+        const docRef = await addDoc(collection(db, "users_database"), {
+          userId: user.uid, userName: user.displayName || user.email,
+          prompt: aiPrompt, html: htmlCode, css: cssCode,
+          cdnUrl: cdnUrl || "", fileName: customFileName || fileName,
+          deployType, packageName: pkgName, isPublic,
+          createdAt: serverTimestamp(),
+        });
+        setCurrentDocId(docRef.id);
+      }
       fetchHistory();
     } catch (err) { console.error("Error saving:", err); toast.error("Failed to sync"); }
+  };
+
+  const fetchWebsiteHistory = async () => {
+    if (!user) return;
+    setIsLoadingHistory(true);
+    try {
+      const q = query(
+        collection(db, "websites"),
+        where("userId", "==", user.uid)
+        // orderBy("createdAt", "desc") // Removed to avoid index requirement
+      );
+      const snapshot = await getDocs(q);
+      const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort in memory to avoid index requirement
+      items.sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setWebsiteHistory(items);
+    } catch (err) {
+      console.error("Error fetching websites:", err);
+      toast.error("Failed to load websites");
+    } finally {
+      setIsLoadingHistory(false);
+    }
   };
 
   const getIframeContent = (html: string, css: string, js: string, fw: string, visualEdit: boolean) => {
@@ -313,7 +355,7 @@ export default function HomePage() {
 
   const generateCode = async () => {
     if (!aiPrompt.trim()) return;
-    setUploadResult(null); setDeployedFileName(null);
+    setUploadResult(null); setDeployedFileName(null); setCurrentDocId(null);
     setIsGenerating(true); setLoadingMessage("Analyzing prompt...");
     let finalPrompt = aiPrompt;
     if (selectedImage) {
@@ -330,20 +372,19 @@ export default function HomePage() {
       } catch (err) { toast.error("Image analysis failed. Using text prompt."); }
     }
     try {
-      const selectedVibe = designVibes[Math.floor(Math.random() * designVibes.length)];
       setTimeout(() => setLoadingMessage("Generating logic..."), 1500);
       setTimeout(() => setLoadingMessage("Styling component..."), 3000);
       setTimeout(() => setLoadingMessage("Polishing code..."), 4500);
-      const enhancedPrompt = `${finalPrompt}. ### STYLING: Apply **${selectedVibe.name}** vibe: ${selectedVibe.description}. Use ${framework === 'css' ? 'Vanilla CSS' : framework === 'tailwind' ? 'Tailwind CSS' : 'Bootstrap 5'}.`;
+
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: enhancedPrompt, framework, model: selectedModel }),
+        body: JSON.stringify({ prompt: finalPrompt, framework, model: selectedModel }),
       });
       if (!res.ok) throw new Error("Generation failed");
       const data = await res.json();
       processCode(data.code);
-      toast.success(`Generated with ${selectedVibe.name} flair!`);
+      toast.success(`Generated successfully!`);
     } catch (err) { toast.error("Generation failed. Please try again."); }
     finally { setIsGenerating(false); setLoadingMessage(""); }
   };
@@ -372,7 +413,7 @@ export default function HomePage() {
       const data = await res.json();
       setUploadResult(data); setDeployedFileName(uploadFileName);
       toast.success(deployedFileName ? "CDN updated!" : "Deployed to GitHub CDN!");
-      await saveToFirebase(data.cdnUrl, uploadFileName);
+      await saveToFirebase(data.cdnUrl, uploadFileName, "cdn", packageName);
     } catch (err) { toast.error("Cloud deployment failed"); }
     finally { setIsUploading(false); }
   };
@@ -417,8 +458,40 @@ export default function HomePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to publish");
 
-      toast.success(`Component saved to ${data.path}`);
-      await saveToFirebase("", "", "npm", packageName);
+      toast.custom((t) => (
+        <div className="flex flex-col gap-3 w-full bg-white/90 backdrop-blur-md border border-zinc-200 shadow-2xl rounded-2xl p-5 animate-in slide-in-from-top-5 duration-300">
+          <div className="flex items-start justify-between">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-zinc-900 text-sm">Published to NPM Registry</h3>
+                <p className="text-xs text-zinc-500 mt-1">Package <span className="font-mono font-bold text-zinc-800">@{packageName}</span> is live.</p>
+              </div>
+            </div>
+            <button onClick={() => toast.dismiss(t)} className="p-1 hover:bg-zinc-100 rounded-full text-zinc-400 hover:text-zinc-600 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 flex items-center justify-between group cursor-pointer hover:border-zinc-300 transition-colors"
+            onClick={() => {
+              navigator.clipboard.writeText(`npx neura add ${packageName}`);
+              toast.success("Command copied!", { id: "copy-cmd" });
+            }}
+          >
+            <div className="flex items-center gap-2 overflow-hidden">
+              <Terminal className="w-4 h-4 text-zinc-400 shrink-0" />
+              <code className="text-xs font-mono text-zinc-700 truncate">npx neura add {packageName}</code>
+            </div>
+            <div className="p-1.5 bg-white border border-zinc-200 rounded-lg shadow-sm group-hover:scale-105 transition-transform">
+              <Copy className="w-3.5 h-3.5 text-zinc-500" />
+            </div>
+          </div>
+        </div>
+      ), { duration: 8000 });
+      await saveToFirebase(uploadResult?.cdnUrl || "", deployedFileName || "", "npm", packageName);
     } catch (err: any) {
       toast.error(err.message || "Failed to publish to NPM");
     } finally {
@@ -626,7 +699,7 @@ export default function HomePage() {
 
           {/* ── WEBSITE BETA VIEW ── */}
           {currentView === "website-beta" && (
-            <div className="slide-up h-full">
+            <div className="slide-up h-[calc(100vh-140px)] min-h-[600px]">
               <WebsiteBuilder />
             </div>
           )}
@@ -1146,10 +1219,27 @@ export default function HomePage() {
                       </button>
                       <div className="pt-2 border-t border-zinc-100">
                         <p className="text-[10px] text-zinc-400 mb-2">Installation</p>
+
+                        {/* Step 1 */}
+                        <div className="bg-zinc-900 rounded-[12px] p-3 flex items-center justify-between mb-2">
+                          <code className="text-[10px] text-zinc-300 mono">npm i neura-packages</code>
+                          <Copy
+                            onClick={() => {
+                              navigator.clipboard.writeText(`npm i neura-packages`);
+                              toast.success("Copied!");
+                            }}
+                            className="w-3 h-3 text-zinc-500 cursor-pointer hover:text-white transition-colors"
+                          />
+                        </div>
+
+                        {/* Step 2 */}
                         <div className="bg-zinc-900 rounded-[12px] p-3 flex items-center justify-between">
                           <code className="text-[10px] text-zinc-300 mono">npx neura add {packageName || "my-component"}</code>
                           <Copy
-                            onClick={() => copyToClipboard(`npx neura add ${packageName || "my-component"}`)}
+                            onClick={() => {
+                              navigator.clipboard.writeText(`npx neura add ${packageName || "my-component"}`);
+                              toast.success("Copied!");
+                            }}
                             className="w-3 h-3 text-zinc-500 cursor-pointer hover:text-white transition-colors"
                           />
                         </div>
@@ -1195,22 +1285,36 @@ export default function HomePage() {
           {currentView === "showcase" && (
             <div className="max-w-7xl mx-auto w-full slide-up">
               <div className="glass-card rounded-[28px] p-6 md:p-10" style={{ minHeight: '80vh' }}>
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
+                {/* Component Library Header */}
+                <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-4">
-                    <div className="w-11 h-11 bg-black rounded-2xl flex items-center justify-center shadow-md">
-                      <LayoutGrid style={{ width: '18px', height: '18px', color: 'white' }} />
+                    <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-lg shadow-zinc-500/20">
+                      <LayoutGrid style={{ width: '20px', height: '20px', color: 'white' }} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-zinc-900">Component Library</h2>
-                      <p className="text-xs text-zinc-400 mt-0.5">Your personal production showcase</p>
+                      <h2 className="text-xl font-bold text-zinc-900">Library</h2>
+                      <div className="flex items-center gap-4 mt-1">
+                        <button
+                          onClick={() => setActiveLibraryTab("components")}
+                          className={`text-sm font-medium transition-colors ${activeLibraryTab === "components" ? "text-black border-b-2 border-black pb-0.5" : "text-zinc-400 hover:text-zinc-600"}`}
+                        >
+                          Components
+                        </button>
+                        <button
+                          onClick={() => setActiveLibraryTab("websites")}
+                          className={`text-sm font-medium transition-colors ${activeLibraryTab === "websites" ? "text-black border-b-2 border-black pb-0.5" : "text-zinc-400 hover:text-zinc-600"}`}
+                        >
+                          Websites
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="tag-pill bg-zinc-100 text-zinc-500 px-3 py-2 rounded-full border border-zinc-200">
-                      {history.length} units
+                      {activeLibraryTab === "components" ? history.length : websiteHistory.length} items
                     </span>
                     <button
-                      onClick={fetchHistory}
+                      onClick={() => { fetchHistory(); fetchWebsiteHistory(); }}
                       className="w-10 h-10 glass-card rounded-full flex items-center justify-center hover:bg-white transition-all active:scale-95"
                     >
                       <RefreshCw className={isLoadingHistory ? "animate-spin" : ""} style={{ width: '14px', height: '14px', color: '#71717a' }} />
@@ -1218,79 +1322,145 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {history.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {history.map((item, idx) => (
-                      <div
-                        key={item.id}
-                        className="group bg-white/60 border border-white/80 rounded-[24px] overflow-hidden hover:border-white hover:shadow-xl hover:shadow-black/8 transition-all duration-500 flex flex-col"
-                        style={{ height: '380px', animationDelay: `${idx * 60}ms` }}
-                      >
-                        {/* Preview */}
-                        <div className="flex-1 relative overflow-hidden bg-zinc-50/80">
-                          <iframe
-                            title="Showcase"
-                            srcDoc={`<!DOCTYPE html><html><head><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;overflow:hidden;transform:scale(0.6);transform-origin:center;}${item.css}</style></head><body>${item.html}</body></html>`}
-                            className="w-full h-full border-none pointer-events-none transition-transform duration-700 group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                          {/* Overlay actions */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                            <button
-                              onClick={() => setSelectedItem(item)}
-                              className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-xs font-bold shadow-xl transform translate-y-2 group-hover:translate-y-0 transition-all duration-300"
-                            >
-                              <Code style={{ width: '12px', height: '12px' }} /> Get Code
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Meta */}
-                        <div className="p-4 border-t border-zinc-100/80 flex-shrink-0">
-                          <p className="text-xs font-medium text-zinc-700 line-clamp-1 italic mb-2">"{item.prompt}"</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-zinc-400">
-                              {item.createdAt instanceof Timestamp ? item.createdAt.toDate().toLocaleDateString() : 'Recent'}
-                            </span>
-                            <div className="flex items-center gap-2">
+                {activeLibraryTab === "components" ? (
+                  // COMPONENTS GRID
+                  history.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {history.map((item, idx) => (
+                        <div
+                          key={item.id}
+                          className="group bg-white/60 border border-white/80 rounded-[24px] overflow-hidden hover:border-white hover:shadow-xl hover:shadow-black/8 transition-all duration-500 flex flex-col"
+                          style={{ height: '380px', animationDelay: `${idx * 60}ms` }}
+                        >
+                          {/* Preview */}
+                          <div className="flex-1 relative overflow-hidden bg-zinc-50/80">
+                            <iframe
+                              title="Showcase"
+                              srcDoc={`<!DOCTYPE html><html><head><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;overflow:hidden;transform:scale(0.6);transform-origin:center;}${item.css}</style></head><body>${item.html}</body></html>`}
+                              className="w-full h-full border-none pointer-events-none transition-transform duration-700 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            {/* Overlay actions */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
                               <button
-                                onClick={(e) => toggleVisibility(e, item)}
-                                className={`p-1.5 rounded-full transition-all duration-200 ${item.isPublic
-                                  ? "bg-blue-50 text-blue-500 hover:bg-blue-100"
-                                  : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
-                                  }`}
-                                title={item.isPublic ? "Public (Click to make Private)" : "Private (Click to make Public)"}
+                                onClick={() => setSelectedItem(item)}
+                                className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-xs font-bold shadow-xl transform translate-y-2 group-hover:translate-y-0 transition-all duration-300"
                               >
-                                {item.isPublic ? (
-                                  <Globe style={{ width: '12px', height: '12px' }} />
-                                ) : (
-                                  <Lock style={{ width: '12px', height: '12px' }} />
-                                )}
+                                <Code style={{ width: '12px', height: '12px' }} /> Get Code
                               </button>
-                              {item.deployType === 'npm' ? (
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-mono text-zinc-500">{item.packageName}</span>
-                                  <span className="tag-pill bg-red-50 text-red-600 px-2 py-1 rounded-full border border-red-100 text-[9px] font-bold">NPM</span>
-                                </div>
-                              ) : (
-                                <span className="tag-pill bg-green-50 text-green-600 px-2 py-1 rounded-full border border-green-100 text-[9px] font-bold">CDN Live</span>
-                              )}
+                            </div>
+                          </div>
+
+                          {/* Meta */}
+                          <div className="p-4 border-t border-zinc-100/80 flex-shrink-0">
+                            <p className="text-xs font-medium text-zinc-700 line-clamp-1 italic mb-2">"{item.prompt}"</p>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] text-zinc-400">
+                                {item.createdAt instanceof Timestamp ? item.createdAt.toDate().toLocaleDateString() : 'Recent'}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => toggleVisibility(e, item)}
+                                  className={`p-1.5 rounded-full transition-all duration-200 ${item.isPublic
+                                    ? "bg-blue-50 text-blue-500 hover:bg-blue-100"
+                                    : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
+                                    }`}
+                                  title={item.isPublic ? "Public (Click to make Private)" : "Private (Click to make Public)"}
+                                >
+                                  {item.isPublic ? (
+                                    <Globe style={{ width: '12px', height: '12px' }} />
+                                  ) : (
+                                    <Lock style={{ width: '12px', height: '12px' }} />
+                                  )}
+                                </button>
+                                {item.packageName && (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-mono text-zinc-500">{item.packageName}</span>
+                                    <span className="tag-pill bg-red-50 text-red-600 px-2 py-1 rounded-full border border-red-100 text-[9px] font-bold">NPM</span>
+                                  </div>
+                                )}
+                                {item.cdnUrl && (
+                                  <span className="tag-pill bg-green-50 text-green-600 px-2 py-1 rounded-full border border-green-100 text-[9px] font-bold">CDN Live</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-32 gap-6 opacity-50">
+                      <div className="w-20 h-20 rounded-[24px] bg-zinc-100 flex items-center justify-center border border-dashed border-zinc-200">
+                        <LayoutGrid style={{ width: '32px', height: '32px', color: '#d4d4d8' }} />
                       </div>
-                    ))}
-                  </div>
+                      <div className="text-center">
+                        <h3 className="text-lg font-bold text-zinc-700 mb-1">Library is empty</h3>
+                        <p className="text-sm text-zinc-400">Generate components to build your showcase</p>
+                      </div>
+                    </div>
+                  )
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-32 gap-6 opacity-50">
-                    <div className="w-20 h-20 rounded-[24px] bg-zinc-100 flex items-center justify-center border border-dashed border-zinc-200">
-                      <LayoutGrid style={{ width: '32px', height: '32px', color: '#d4d4d8' }} />
+                  // WEBSITES GRID
+                  websiteHistory.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {websiteHistory.map((site, idx) => (
+                        <div
+                          key={site.id}
+                          className="group bg-white/60 border border-white/80 rounded-[24px] overflow-hidden hover:border-white hover:shadow-xl hover:shadow-black/8 transition-all duration-500 flex flex-col"
+                          style={{ height: '380px', animationDelay: `${idx * 60}ms` }}
+                        >
+                          {/* Preview */}
+                          <div className="flex-1 relative overflow-hidden bg-zinc-50/80">
+                            <iframe
+                              title="Website Showcase"
+                              srcDoc={site.html ? site.html.replace('</head>', '<style>::-webkit-scrollbar { display: none !important; width: 0 !important; } body { -ms-overflow-style: none !important; scrollbar-width: none !important; transform: scale(0.4); transform-origin: top center; height: 250%; width: 250%; }</style></head>') : ''}
+                              className="w-full h-full border-none pointer-events-none transition-transform duration-700 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            {/* Overlay actions */}
+                            <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              <button
+                                onClick={() => setSelectedWebsite(site)}
+                                className="glass-card bg-white/90 hover:bg-white flex items-center gap-2 px-5 py-2.5 rounded-full text-zinc-800 text-xs font-bold shadow-xl transform translate-y-2 group-hover:translate-y-0 transition-all duration-300"
+                              >
+                                <Code style={{ width: '12px', height: '12px' }} /> Code
+                              </button>
+                              <button
+                                onClick={() => setViewingWebsite(site)}
+                                className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-xs font-bold shadow-xl transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 delay-75"
+                              >
+                                <ExternalLink style={{ width: '12px', height: '12px' }} /> Open
+                              </button>
+                            </div>
+                          </div>
+                          {/* Info */}
+                          <div className="p-5 bg-white/50 backdrop-blur-sm border-t border-white/50">
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <h3 className="text-sm font-bold text-zinc-900 line-clamp-1">{site.prompt || "Generated Website"}</h3>
+                                <p className="text-[10px] text-zinc-400 mt-1 flex items-center gap-2">
+                                  {site.createdAt?.seconds ? new Date(site.createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}
+                                  <span>•</span>
+                                  {site.theme || 'No Theme'}
+                                </p>
+                              </div>
+                              <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center shrink-0">
+                                <Monitor className="w-3.5 h-3.5 text-zinc-400" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="text-center">
-                      <h3 className="text-lg font-bold text-zinc-700 mb-1">Library is empty</h3>
-                      <p className="text-sm text-zinc-400">Generate components to build your showcase</p>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 text-center opacity-60">
+                      <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center mb-4">
+                        <Monitor className="w-6 h-6 text-zinc-400" />
+                      </div>
+                      <h3 className="text-sm font-bold text-zinc-900">No websites yet</h3>
+                      <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Websites generated in Neura Website Builder will appear here</p>
                     </div>
-                  </div>
+                  )
                 )}
               </div>
             </div>
@@ -1339,6 +1509,8 @@ export default function HomePage() {
                       setDeployedFileName(selectedItem.fileName || null);
                       setCurrentView("generator");
                       if (selectedItem.cdnUrl) setUploadResult({ cdnUrl: selectedItem.cdnUrl, filename: selectedItem.fileName || "" });
+                      setCurrentDocId(selectedItem.id);
+                      setPackageName(selectedItem.packageName || "");
                       toast.success("Loaded in editor!");
                       setSelectedItem(null);
                     }}
@@ -1357,48 +1529,93 @@ export default function HomePage() {
 
               <div className="flex-1 overflow-y-auto p-8 space-y-6">
                 {/* Step 1: Install / CDN Link */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="w-6 h-6 rounded-full bg-black text-white text-[10px] flex items-center justify-center font-bold">1</span>
-                    <span className="text-xs font-black uppercase tracking-widest text-zinc-700">
-                      {selectedItem.deployType === 'npm' ? "Install via NPM" : "Add to <head>"}
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      readOnly
-                      value={selectedItem.deployType === 'npm'
-                        ? `npx neura add ${selectedItem.packageName || "my-component"}`
-                        : (selectedItem.cdnUrl
-                          ? (selectedItem.cdnUrl.endsWith('.js')
-                            ? `<script src="${selectedItem.cdnUrl}"></script>`
-                            : `<link rel="stylesheet" href="${selectedItem.cdnUrl}">`)
-                          : "Deploy component to get CDN link")
-                      }
-                      className="w-full bg-zinc-50 border border-zinc-100 rounded-[16px] px-5 py-3.5 text-[11px] mono text-zinc-600 pr-14"
-                    />
-                    <button
-                      onClick={() => copyToClipboard(
-                        selectedItem.deployType === 'npm'
-                          ? `npx neura add ${selectedItem.packageName || "my-component"}`
-                          : (selectedItem.cdnUrl
+                <div className="space-y-6">
+                  {/* NPM SECTION */}
+                  {selectedItem.deployType === 'npm' || selectedItem.packageName ? (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="w-6 h-6 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">1</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-zinc-700">Install via NPM</span>
+                      </div>
+
+                      {/* Step 1.1: Install Core */}
+                      <div className="mb-3">
+                        <p className="text-[10px] text-zinc-400 mb-1.5 font-bold uppercase tracking-wider ml-1">Core Dependency</p>
+                        <div className="relative">
+                          <input
+                            readOnly
+                            value="npm i neura-packages"
+                            className="w-full bg-zinc-50 border border-zinc-100 rounded-[16px] px-5 py-3.5 text-[11px] mono text-zinc-600 pr-14"
+                          />
+                          <button
+                            onClick={() => copyToClipboard("npm i neura-packages", "Install Command")}
+                            className="absolute right-2 top-2 w-9 h-9 bg-zinc-200 hover:bg-zinc-300 rounded-full flex items-center justify-center transition-colors"
+                          >
+                            <Copy style={{ width: '13px', height: '13px', color: '#52525b' }} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Step 1.2: Add Component */}
+                      <div>
+                        <p className="text-[10px] text-zinc-400 mb-1.5 font-bold uppercase tracking-wider ml-1">Add Component</p>
+                        <div className="relative">
+                          <input
+                            readOnly
+                            value={`npx neura add ${selectedItem.packageName || "my-component"}`}
+                            className="w-full bg-zinc-50 border border-zinc-100 rounded-[16px] px-5 py-3.5 text-[11px] mono text-zinc-600 pr-14"
+                          />
+                          <button
+                            onClick={() => copyToClipboard(`npx neura add ${selectedItem.packageName || "my-component"}`, "Add Command")}
+                            className="absolute right-2 top-2 w-9 h-9 btn-primary rounded-full flex items-center justify-center"
+                          >
+                            <Copy style={{ width: '13px', height: '13px', color: 'white' }} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* CDN SECTION */}
+                  {selectedItem.deployType === 'cdn' || selectedItem.cdnUrl ? (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="w-6 h-6 rounded-full bg-blue-500 text-white text-[10px] flex items-center justify-center font-bold">{selectedItem.packageName ? '2' : '1'}</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-zinc-700">Add via CDN</span>
+                      </div>
+                      <div className="relative">
+                        <input
+                          readOnly
+                          value={selectedItem.cdnUrl
                             ? (selectedItem.cdnUrl.endsWith('.js')
                               ? `<script src="${selectedItem.cdnUrl}"></script>`
                               : `<link rel="stylesheet" href="${selectedItem.cdnUrl}">`)
-                            : ""),
-                        selectedItem.deployType === 'npm' ? "NPM Command" : "CDN Tag"
-                      )}
-                      className="absolute right-2 top-2 w-9 h-9 btn-primary rounded-full flex items-center justify-center"
-                    >
-                      <Copy style={{ width: '13px', height: '13px', color: 'white' }} />
-                    </button>
-                  </div>
+                            : "Deploy component to get CDN link"
+                          }
+                          className="w-full bg-zinc-50 border border-zinc-100 rounded-[16px] px-5 py-3.5 text-[11px] mono text-zinc-600 pr-14"
+                        />
+                        <button
+                          onClick={() => copyToClipboard(
+                            selectedItem.cdnUrl
+                              ? (selectedItem.cdnUrl.endsWith('.js')
+                                ? `<script src="${selectedItem.cdnUrl}"></script>`
+                                : `<link rel="stylesheet" href="${selectedItem.cdnUrl}">`)
+                              : "",
+                            "CDN Tag"
+                          )}
+                          className="absolute right-2 top-2 w-9 h-9 btn-primary rounded-full flex items-center justify-center"
+                        >
+                          <Copy style={{ width: '13px', height: '13px', color: 'white' }} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Step 2: HTML markup */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="w-6 h-6 rounded-full bg-black text-white text-[10px] flex items-center justify-center font-bold">2</span>
+                    <span className="w-6 h-6 rounded-full bg-black text-white text-[10px] flex items-center justify-center font-bold">{selectedItem.packageName && selectedItem.cdnUrl ? '3' : '2'}</span>
                     <span className="text-xs font-black uppercase tracking-widest text-zinc-700">Paste HTML Markup</span>
                   </div>
                   <div className="relative">
@@ -1418,6 +1635,93 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── WEBSITE CODE MODAL ─── */}
+      {selectedWebsite && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-2xl z-[100] flex items-center justify-center p-4 md:p-8">
+          <div
+            className="bg-white w-full max-w-4xl rounded-[32px] overflow-hidden shadow-2xl flex flex-col border border-zinc-100"
+            style={{ maxHeight: '90vh' }}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-zinc-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg shadow-zinc-500/20">
+                  <Code style={{ width: '18px', height: '18px', color: 'white' }} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-zinc-900">Website Code</h2>
+                  <p className="text-xs text-zinc-400 mt-0.5">{selectedWebsite.prompt || "Generated Website"}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedWebsite(null)}
+                className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center transition-colors"
+              >
+                <X style={{ width: '14px', height: '14px', color: '#71717a' }} />
+              </button>
+            </div>
+            <div className="p-8 overflow-y-auto bg-zinc-50">
+              <div className="relative">
+                <textarea
+                  readOnly
+                  value={selectedWebsite.html}
+                  className="w-full bg-white border border-zinc-200 rounded-[20px] p-6 text-xs mono text-zinc-600 h-[60vh] resize-none outline-none focus:border-zinc-300 transition-colors shadow-sm"
+                />
+                <button
+                  onClick={() => copyToClipboard(selectedWebsite.html, "Website HTML")}
+                  className="absolute right-4 top-4 w-9 h-9 btn-primary rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+                >
+                  <Copy style={{ width: '13px', height: '13px', color: 'white' }} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── FULLSCREEN WEBSITE PREVIEW ─── */}
+      {viewingWebsite && (
+        <div className="fixed inset-0 z-[200] bg-white flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          {/* Header */}
+          <div className="h-16 border-b border-zinc-100 flex items-center justify-between px-6 bg-white shrink-0 shadow-sm z-10">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setViewingWebsite(null)}
+                className="w-10 h-10 rounded-full bg-zinc-50 hover:bg-zinc-100 flex items-center justify-center transition-colors group"
+              >
+                <ArrowLeft className="w-5 h-5 text-zinc-500 group-hover:text-zinc-900" />
+              </button>
+              <div className="w-px h-6 bg-zinc-200" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg shadow-black/20">
+                  <Globe className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 line-clamp-1 max-w-[300px]">{viewingWebsite.prompt || "Website Preview"}</h3>
+                  <p className="text-xs text-zinc-500 font-medium">{viewingWebsite.theme || "No Theme"} • {viewingWebsite.framework?.toUpperCase() || "CSS"}</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <button
+                onClick={() => window.open(`/site/${viewingWebsite.id}`, '_blank')}
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 text-xs font-bold transition-all"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Open in New Tab
+              </button>
+            </div>
+          </div>
+          {/* Iframe */}
+          <div className="flex-1 w-full h-full bg-zinc-100 relative overflow-hidden">
+            <iframe
+              srcDoc={viewingWebsite.html}
+              className="w-full h-full border-none bg-white"
+              title="Fullscreen Preview"
+            />
           </div>
         </div>
       )}
