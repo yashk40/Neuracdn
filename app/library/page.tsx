@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowRight, Copy, Check, Terminal, Zap, Shield, Globe, Box, Github, ChevronRight, Command } from "lucide-react"
+import { ArrowRight, Copy, Check, Terminal, Zap, Shield, Globe, Box, Github, ChevronRight, Command, Brain } from "lucide-react"
 
 export default function LibraryPage() {
-    const [copied, setCopied] = useState(false)
-    const [activeTab, setActiveTab] = useState("react")
+    const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
+    const [activeTab, setActiveTab] = useState("react") // Removing this variable usage later
 
-    const copyCommand = () => {
-        navigator.clipboard.writeText("npm install @neuracdn/react")
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
+
+    const copyCommand = (command: string) => {
+        navigator.clipboard.writeText(command)
+        setCopiedCommand(command)
+        setTimeout(() => setCopiedCommand(null), 2000)
     }
 
     return (
@@ -24,14 +25,18 @@ export default function LibraryPage() {
             {/* Navigation */}
             <nav className="fixed top-0 w-full border-b border-white/5 bg-black/80 backdrop-blur-xl z-50">
                 <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-                    <Link href="/" className="font-bold text-xl tracking-tighter flex items-center gap-2">
-                        <div className="w-5 h-5 bg-white rounded-sm"></div>
-                        NEURA<span className="font-light opacity-50">LIB</span>
+                    <Link href="/" className="group flex items-center gap-3 hover:opacity-80 transition-opacity">
+                        <div className="p-2 bg-white/10 rounded-lg group-hover:bg-white/20 transition-colors border border-white/10">
+                            <Brain className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="font-bold text-lg leading-none tracking-tight text-white">Neura</span>
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">Library</span>
+                        </div>
                     </Link>
                     <div className="flex items-center gap-8 text-sm font-medium text-white/60">
-                        <Link href="/docs" className="hover:text-white transition-colors">Documentation</Link>
-                        <Link href="/components" className="hover:text-white transition-colors">Components</Link>
-                        <Link href="https://github.com" target="_blank" className="text-white hover:opacity-80 transition-opacity">
+                        <Link href="/library/components" className="hover:text-white transition-colors">Components</Link>
+                        <Link href="https://github.com/yashk40/Neuracdn.git" target="_blank" className="text-white hover:opacity-80 transition-opacity">
                             <Github className="w-5 h-5" />
                         </Link>
                     </div>
@@ -57,17 +62,29 @@ export default function LibraryPage() {
                                 Distributed UI components. Versioned, cached, and delivered from the edge in <span className="text-white font-medium">milliseconds</span>.
                             </p>
 
-                            <div className="flex flex-col sm:flex-row gap-6 items-center w-full max-w-md mx-auto">
+                            <div className="flex flex-col sm:flex-row gap-4 items-center w-full max-w-2xl mx-auto">
                                 <button
-                                    onClick={copyCommand}
+                                    onClick={() => copyCommand("npm i neura-packages")}
                                     className="group relative w-full flex items-center justify-between bg-[#111] border border-white/10 rounded-lg px-4 py-4 hover:border-white/20 transition-all text-left font-mono text-sm"
                                 >
                                     <div className="flex items-center gap-3 text-white/70">
                                         <ChevronRight className="w-4 h-4 text-white/30" />
-                                        <span>npm i @neuracdn/react</span>
+                                        <span>npm i neura-packages</span>
                                     </div>
                                     <div className="text-white/30 group-hover:text-white transition-colors">
-                                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                        {copiedCommand === "npm i neura-packages" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => copyCommand("npx neura init")}
+                                    className="group relative w-full flex items-center justify-between bg-[#111] border border-white/10 rounded-lg px-4 py-4 hover:border-white/20 transition-all text-left font-mono text-sm"
+                                >
+                                    <div className="flex items-center gap-3 text-white/70">
+                                        <ChevronRight className="w-4 h-4 text-white/30" />
+                                        <span>npx neura init</span>
+                                    </div>
+                                    <div className="text-white/30 group-hover:text-white transition-colors">
+                                        {copiedCommand === "npx neura init" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                                     </div>
                                 </button>
                             </div>
@@ -83,7 +100,6 @@ export default function LibraryPage() {
                                 { label: "Edge Locations", value: "240+" },
                                 { label: "Global Latency", value: "<50ms" },
                                 { label: "Uptime", value: "99.99%" },
-                                { label: "Lookups/Day", value: "1.2B" },
                             ].map((stat, i) => (
                                 <div key={i} className="flex flex-col items-center md:items-start">
                                     <span className="text-3xl md:text-4xl font-bold tracking-tight mb-1">{stat.value}</span>
@@ -147,49 +163,24 @@ export default function LibraryPage() {
                                         <div className="w-3 h-3 rounded-full bg-white/10"></div>
                                     </div>
                                     <div className="flex gap-4 text-xs font-mono text-white/40">
-                                        <button
-                                            onClick={() => setActiveTab("react")}
-                                            className={`hover:text-white transition-colors ${activeTab === "react" ? "text-white" : ""}`}
-                                        >
+                                        <div className="text-white">
                                             App.tsx
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab("config")}
-                                            className={`hover:text-white transition-colors ${activeTab === "config" ? "text-white" : ""}`}
-                                        >
-                                            neura.config.js
-                                        </button>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="p-6 font-mono text-sm leading-relaxed overflow-x-auto">
-                                    {activeTab === "react" ? (
-                                        <pre>
-                                            <span className="text-purple-400">import</span> {"{"} CDNComponent {"}"} <span className="text-purple-400">from</span> <span className="text-emerald-400">'@neuracdn/react'</span>{'\n\n'}
-                                            <span className="text-purple-400">export default</span> <span className="text-blue-400">function</span> <span className="text-yellow-200">App</span>() {'{'}{'\n'}
-                                            {'  '}<span className="text-purple-400">return</span> ({'\n'}
-                                            {'    '}&lt;<span className="text-blue-400">div</span> <span className="text-purple-400">className</span>=<span className="text-emerald-400">"grid gap-4"</span>&gt;{'\n'}
-                                            {'      '}&lt;<span className="text-yellow-200">CDNComponent</span>{'\n'}
-                                            {'        '}src=<span className="text-emerald-400">"marketing/hero-slider"</span>{'\n'}
-                                            {'        '}version=<span className="text-emerald-400">"latest"</span>{'\n'}
-                                            {'        '}fallback={'<'}<span className="text-yellow-200">Skeleton</span> /&gt;{'\n'}
-                                            {'      '}/&gt;{'\n'}
-                                            {'    '}&lt;/<span className="text-blue-400">div</span>&gt;{'\n'}
-                                            {'  '}){'\n'}
-                                            {'}'}
-                                        </pre>
-                                    ) : (
-                                        <pre>
-                                            <span className="text-purple-400">module</span>.<span className="text-blue-400">exports</span> = {'{'}{'\n'}
-                                            {'  '}apiKey: <span className="text-emerald-400">process.env.NEURA_KEY</span>,{'\n'}
-                                            {'  '}regions: [<span className="text-emerald-400">'us-east'</span>, <span className="text-emerald-400">'eu-west'</span>, <span className="text-emerald-400">'asia-south'</span>],{'\n'}
-                                            {'  '}caching: {'{'}{'\n'}
-                                            {'    '}strategy: <span className="text-emerald-400">'stale-while-revalidate'</span>,{'\n'}
-                                            {'    '}ttl: <span className="text-blue-400">3600</span>{'\n'}
-                                            {'  '}{'}'}{'\n'}
-                                            {'}'}
-                                        </pre>
-                                    )}
+                                    <pre>
+                                        <span className="text-purple-400">import</span> Image <span className="text-purple-400">from</span> <span className="text-emerald-400">"next/image"</span>;{'\n'}
+                                        <span className="text-purple-400">import</span> BasicForm <span className="text-purple-400">from</span> <span className="text-emerald-400">"./UI/Basic-form"</span>;{'\n\n'}
+                                        <span className="text-purple-400">export default</span> <span className="text-blue-400">function</span> <span className="text-yellow-200">Home</span>() {'{'}{'\n'}
+                                        {'  '}<span className="text-purple-400">return</span> ({'\n'}
+                                        {'    '}&lt;&gt;{'\n'}
+                                        {'      '}&lt;<span className="text-yellow-200">BasicForm</span>/&gt;{'\n'}
+                                        {'    '}&lt;/&gt;{'\n'}
+                                        {'  '});{'\n'}
+                                        {'}'}
+                                    </pre>
                                 </div>
                             </div>
                         </div>
@@ -197,35 +188,15 @@ export default function LibraryPage() {
                 </section>
 
                 {/* Footer */}
-                <footer className="border-t border-white/10 py-16 px-6">
-                    <div className="container mx-auto max-w-6xl">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-                            <div>
-                                <h4 className="font-bold text-2xl tracking-tight mb-2">NEURALIB</h4>
-                                <p className="text-white/40 max-w-xs">
-                                    The open standard for component delivery.
-                                    <br />Built for the future of frontend.
-                                </p>
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-12 text-sm text-white/60">
-                                <div className="flex flex-col gap-4">
-                                    <span className="font-bold text-white">Product</span>
-                                    <Link href="#" className="hover:text-white transition-colors">Features</Link>
-                                    <Link href="#" className="hover:text-white transition-colors">Enterprise</Link>
-                                    <Link href="#" className="hover:text-white transition-colors">Pricing</Link>
-                                </div>
-                                <div className="flex flex-col gap-4">
-                                    <span className="font-bold text-white">Resources</span>
-                                    <Link href="#" className="hover:text-white transition-colors">Documentation</Link>
-                                    <Link href="#" className="hover:text-white transition-colors">API Reference</Link>
-                                    <Link href="#" className="hover:text-white transition-colors">Status</Link>
-                                </div>
-                                <div className="flex flex-col gap-4">
-                                    <span className="font-bold text-white">Legal</span>
-                                    <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
-                                    <Link href="#" className="hover:text-white transition-colors">Terms</Link>
-                                </div>
-                            </div>
+                <footer className="border-t border-white/5 py-8 px-6 bg-black">
+                    <div className="container mx-auto max-w-6xl flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 text-white/40 text-sm font-mono">
+                            <Brain className="w-4 h-4 text-white/40" />
+                            <span>© 2026 Neura Inc.</span>
+                        </div>
+                        <div className="flex items-center gap-6">
+                            <Link href="https://github.com/yashk40/Neuracdn.git" target="_blank" className="text-white/40 hover:text-white transition-colors text-xs font-mono">GitHub</Link>
+                            <Link href="/privacy" className="text-white/40 hover:text-white transition-colors text-xs font-mono">Privacy</Link>
                         </div>
                     </div>
                 </footer>

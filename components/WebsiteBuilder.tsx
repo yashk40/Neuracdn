@@ -66,11 +66,14 @@ const AgentNode = ({ title, description, status, icon, delay = 0 }: AgentNodePro
 
                     {/* Processing Indicator */}
                     {status === "working" && (
-                        <div className="mt-2 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.3s]" />
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.15s]" />
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce" />
-                            <span className="text-[10px] font-bold text-emerald-500 ml-1 uppercase tracking-wider">Thinking</span>
+                        <div className="mt-3 w-full">
+                            <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-emerald-500 via-green-400 to-emerald-500 w-[50%] animate-[shimmer_1.5s_infinite_linear]" />
+                            </div>
+                            <div className="flex justify-between items-center mt-1.5">
+                                <span className="text-[10px] font-medium text-zinc-400">Processing...</span>
+                                <span className="text-[10px] font-bold text-emerald-400 animate-pulse">ACTIVE</span>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -184,7 +187,7 @@ export default function WebsiteBuilder() {
     const [isFrameworkDropdownOpen, setIsFrameworkDropdownOpen] = useState(false);
     const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
     const [selectedTheme, setSelectedTheme] = useState<string>("random"); // "random" or theme name or "none"
-    const [thinkingMode, setThinkingMode] = useState(false); // Thinking mode toggle
+
 
     // Agent States
     const [agentStates, setAgentStates] = useState({
@@ -240,32 +243,7 @@ export default function WebsiteBuilder() {
         }
     };
 
-    const toggleThinkingMode = async () => {
-        const newMode = !thinkingMode;
-        setThinkingMode(newMode);
 
-        try {
-            const mode = newMode ? 'on' : 'off';
-            await fetch(`/api/neura/thinking?mode=${mode}`);
-            toast.success(`Thinking mode ${mode === 'on' ? 'enabled' : 'disabled'}`);
-        } catch (error) {
-            console.error('Failed to toggle thinking mode:', error);
-            toast.error('Failed to toggle thinking mode');
-            setThinkingMode(!newMode); // Revert on error
-        }
-    };
-
-    // Auto-disable thinking mode on component mount
-    useEffect(() => {
-        const disableThinkingMode = async () => {
-            try {
-                await fetch('/api/neura/thinking?mode=off');
-            } catch (error) {
-                console.error('Failed to disable thinking mode on mount:', error);
-            }
-        };
-        disableThinkingMode();
-    }, []);
 
     const saveWebsite = async () => {
         if (!user) {
@@ -433,7 +411,8 @@ export default function WebsiteBuilder() {
 
                 // Start the generation process and polling simultaneously
                 const startTime = Date.now();
-                const timeoutLimit = 1000000; // 15 minutes in milliseconds
+                // Removed timeoutLimit as per user request to wait indefinitely
+
 
                 let frameworkInstruction = "";
                 if (selectedFramework === "css") {
@@ -453,20 +432,8 @@ export default function WebsiteBuilder() {
 
                 // Polling logic
                 const pollInterval = setInterval(async () => {
-                    const elapsed = Date.now() - startTime;
+                    // Removed timeout check to wait indefinitely
 
-                    if (elapsed > timeoutLimit) {
-                        clearInterval(pollInterval);
-                        setIsGenerating(false);
-                        setAgentStates(prev => {
-                            const newState = { ...prev };
-                            Object.keys(newState).forEach(k => { if (newState[k] === "working") newState[k] = "error"; });
-                            return newState;
-                        });
-                        setGenerationError("Generation timed out after 15 minutes. No matching response found.");
-                        toast.error("Timeout: No matching prompt found within 15 minutes.");
-                        return;
-                    }
 
                     try {
                         const pollRes = await fetch("http://localhost:3000/response");
@@ -497,6 +464,7 @@ export default function WebsiteBuilder() {
                                 setIsGenerating(false);
                                 toast.success("Website generated using Local Model AI!");
                             } else {
+                                const elapsed = Date.now() - startTime;
                                 console.log(`Polling: Prompt mismatch at ${Math.round(elapsed / 1000)}s, still searching...`);
                             }
                         } else if (data.status === "failed") {
@@ -531,7 +499,8 @@ export default function WebsiteBuilder() {
                 });
 
                 const startTime = Date.now();
-                const timeoutLimit = 300000; // 5 minutes in milliseconds
+                // Removed timeoutLimit as per user request to wait indefinitely    
+
 
                 let frameworkInstruction = "";
                 if (selectedFramework === "css") {
@@ -539,7 +508,7 @@ export default function WebsiteBuilder() {
                 } else if (selectedFramework === "tailwind") {
                     frameworkInstruction = "use only strictly html and tailwind css with cdn in one file and use lenis smooth scroll";
                 } else if (selectedFramework === "bootstrap") {
-                    frameworkInstruction = "use only strictly html and bootstrap 5 with cdn in one file and use lenis smooth scroll and use vanta js for hero page animations";
+                    frameworkInstruction = "use only strictly html and bootstrap 5 with cdn in one file and use lenis smooth scroll and ";
                 }
 
                 const fullPrompt = frameworkInstruction + finalPrompt;
@@ -574,20 +543,8 @@ export default function WebsiteBuilder() {
 
                 // Step 2: Poll for response using ID
                 const pollInterval = setInterval(async () => {
-                    const elapsed = Date.now() - startTime;
+                    // Removed timeout check to wait indefinitely
 
-                    if (elapsed > timeoutLimit) {
-                        clearInterval(pollInterval);
-                        setIsGenerating(false);
-                        setAgentStates(prev => {
-                            const newState = { ...prev };
-                            Object.keys(newState).forEach(k => { if (newState[k] === "working") newState[k] = "error"; });
-                            return newState;
-                        });
-                        setGenerationError("Generation timed out after 10 minutes.");
-                        toast.error("Timeout: Generation took too long.");
-                        return;
-                    }
 
                     try {
                         const pollRes = await fetch(`/api/neura/response?id=${responseId}`);
@@ -970,18 +927,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 )}
                             </div>
 
-                            {/* Thinking Mode Toggle */}
-                            <button
-                                onClick={toggleThinkingMode}
-                                disabled={isGenerating}
-                                className={`border px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm outline-none transition-all ${thinkingMode ? "bg-purple-500 border-purple-600 text-white" : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"} disabled:opacity-50`}
-                            >
+                            {/* Thinking Mode Indicator (Permanently ON) */}
+                            <div className="bg-purple-500 border border-purple-600 px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm text-white cursor-default select-none">
                                 <Sparkles className="w-2.5 h-2.5" />
                                 <span>Thinking</span>
-                                <span className={`text-[7px] font-extrabold ${thinkingMode ? "text-purple-100" : "text-zinc-400"}`}>
-                                    {thinkingMode ? "ON" : "OFF"}
-                                </span>
-                            </button>
+                                <span className="text-[7px] font-extrabold text-purple-100">ON</span>
+                            </div>
+
+
                         </div>
                     </div>
 
@@ -1005,6 +958,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <X style={{ width: '14px', height: '14px' }} />
                                 </button>
                             </div>
+
+
                         ) : (
                             <label className="absolute bottom-4 left-4 z-10 w-9 h-9 rounded-full bg-white border border-zinc-200 flex items-center justify-center cursor-pointer hover:border-black hover:text-black hover:shadow-sm transition-all text-zinc-400">
                                 <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
@@ -1203,11 +1158,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <div
                                         className={`relative transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] bg-black shadow-2xl overflow-hidden
                                             ${viewMode === "mobile"
-                                                ? "w-[260px] h-[520px] rounded-3xl ring-8 ring-black scale-100 origin-center"
+                                                ? "w-[280px] h-[550px] rounded-[3rem] border-[14px] border-black scale-100 origin-center"
                                                 : "w-full h-full rounded-xl ring-0 scale-100"}`}
                                     >
                                         {/* Screen Content */}
-                                        <div className={`w-full h-full overflow-hidden bg-white transition-all duration-500 ${viewMode === "mobile" ? "rounded-3xl" : "rounded-xl"}`}>
+                                        <div className={`w-full h-full overflow-hidden bg-white transition-all duration-500 ${viewMode === "mobile" ? "rounded-[2rem]" : "rounded-xl"}`}>
                                             <iframe
                                                 title="Website Preview"
                                                 srcDoc={generatedHtml ? generatedHtml.replace('</head>', '<style>::-webkit-scrollbar { display: none !important; width: 0 !important; } body { -ms-overflow-style: none !important; scrollbar-width: none !important; }</style></head>') : ''}
@@ -1218,9 +1173,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                                         {/* Phone Notch - Only visible in mobile */}
                                         <div
-                                            className={`absolute left-1/2 -translate-x-1/2 bg-black z-20 transition-all duration-500 ease-in-out -top-1 pointer-events-none
+                                            className={`absolute left-1/2 -translate-x-1/2 bg-black z-20 transition-all duration-500 ease-in-out top-0 pointer-events-none
                                             ${viewMode === "mobile"
-                                                    ? "w-full max-w-[50%] h-6 rounded-b-xl opacity-100"
+                                                    ? "w-[120px] h-6 rounded-b-2xl opacity-100"
                                                     : "w-0 h-0 opacity-0"}`}
                                         />
 
