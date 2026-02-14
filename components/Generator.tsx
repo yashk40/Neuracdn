@@ -391,19 +391,62 @@ export default function HomePage() {
 
   const uploadToGitHub = async () => {
     const isTailwind = framework === "tailwind";
-    if (!isTailwind && !cssCode.trim()) return;
+    const isBootstrap = framework === "bootstrap";
+
+    // Only block if it's vanilla CSS and empty
+    if (!isTailwind && !isBootstrap && !cssCode.trim()) return;
+
     setIsUploading(true);
     try {
       let uploadFileName = deployedFileName || fileName;
       let content = cssCode;
+
       if (isTailwind) {
         if (!deployedFileName || !deployedFileName.startsWith('script-')) {
           const timestamp = Date.now();
           const random = Math.random().toString(36).substring(2, 8);
           uploadFileName = `script-${timestamp}-${random}.js`;
         }
-        content = `(function(){${cssCode.trim() ? `var s=document.createElement('style');s.innerHTML=${JSON.stringify(cssCode)};document.head.appendChild(s);` : ''}if(!document.querySelector('script[src*="cdn.tailwindcss.com"]')){const sc=document.createElement("script");sc.src="https://cdn.tailwindcss.com";document.head.appendChild(sc);}})();`;
+        content = `(function () {
+          ${cssCode.trim() ? `var s=document.createElement('style');s.innerHTML=${JSON.stringify(cssCode)};document.head.appendChild(s);` : ''}
+          function loadTailwind() {
+            if (!document.querySelector('script[src="https://cdn.tailwindcss.com"]')) {
+              var script = document.createElement("script");
+              script.src = "https://cdn.tailwindcss.com";
+              document.head.appendChild(script);
+            }
+          }
+
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", loadTailwind);
+          } else {
+            loadTailwind();
+          }
+        })();`;
+      } else if (isBootstrap) {
+        if (!deployedFileName || !deployedFileName.startsWith('bs-script-')) {
+          const timestamp = Date.now();
+          const random = Math.random().toString(36).substring(2, 8);
+          uploadFileName = `bs-script-${timestamp}-${random}.js`;
+        }
+        // Inject Bootstrap CSS Link + Custom CSS
+        content = `(function(){
+            ${cssCode.trim() ? `var s=document.createElement('style');s.innerHTML=${JSON.stringify(cssCode)};document.head.appendChild(s);` : ''}
+            if(!document.querySelector('link[href*="bootstrap.min.css"]')){
+                const l=document.createElement("link");
+                l.rel="stylesheet";
+                l.href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css";
+                l.onload=function(){console.log("Bootstrap Loaded ✅");};
+                document.head.appendChild(l);
+                  // Also inject JS for components
+                const s=document.createElement("script");
+                s.src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js";
+                s.onload=function(){console.log("Bootstrap JS Loaded ✅");};
+                document.head.appendChild(s);
+            }
+        })();`;
       }
+
       const res = await fetch("/api/github", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -414,8 +457,10 @@ export default function HomePage() {
       setUploadResult(data); setDeployedFileName(uploadFileName);
       toast.success(deployedFileName ? "CDN updated!" : "Deployed to GitHub CDN!");
       await saveToFirebase(data.cdnUrl, uploadFileName, "cdn", packageName);
-    } catch (err) { toast.error("Cloud deployment failed"); }
-    finally { setIsUploading(false); }
+    } catch (err) {
+      console.error("Deployment Error:", err);
+      toast.error("Cloud deployment failed");
+    } finally { setIsUploading(false); }
   };
 
   const toggleVisibility = async (e: React.MouseEvent, item: HistoryItem) => {
@@ -683,6 +728,13 @@ export default function HomePage() {
 
             {/* Status */}
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push('/library/components')}
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded-full text-[10px] font-bold hover:bg-zinc-800 transition-colors shadow-sm"
+              >
+                <LayoutGrid style={{ width: '12px', height: '12px' }} />
+                Open Source Components
+              </button>
               <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
                 <span className="text-[10px] font-bold text-green-600 tracking-wide hidden sm:block">LIVE</span>
@@ -1147,45 +1199,94 @@ export default function HomePage() {
                   </div>
 
                   {deployMode === "cdn" ? (
-                    !uploadResult && !deployedFileName ? (
-                      <button
-                        onClick={uploadToGitHub}
-                        disabled={isUploading || (!cssCode && framework !== "tailwind")}
-                        className="w-full py-3 btn-primary text-white rounded-[14px] text-xs font-bold uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {isUploading ? "Deploying…" : "Push to Production →"}
-                      </button>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 bg-green-50 rounded-[14px] p-3 border border-green-100">
-                          <CheckCircle style={{ width: '16px', height: '16px', color: '#22c55e' }} />
+                    (framework === 'tailwind' || framework === 'bootstrap') ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 bg-blue-50 rounded-[14px] p-3 border border-blue-100">
+                          <Globe style={{ width: '16px', height: '16px', color: '#3b82f6' }} />
                           <div>
-                            <p className="text-[10px] font-bold text-green-700 uppercase tracking-wide">Active · CDN Ready</p>
-                            <p className="text-[10px] text-green-600 mono truncate max-w-[180px]">{deployedFileName}</p>
+                            <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wide">Official CDN</p>
+                            <p className="text-[10px] text-blue-600">Use the official {framework} links</p>
                           </div>
                         </div>
-                        {uploadResult?.cdnUrl && (
-                          <div className="flex gap-2">
-                            <input
-                              readOnly
-                              value={framework === "tailwind" ? `<script src="${uploadResult.cdnUrl}"></script>` : `<link rel="stylesheet" href="${uploadResult.cdnUrl}">`}
-                              className="flex-1 bg-zinc-50 border border-zinc-100 rounded-[12px] px-3 text-[10px] mono text-zinc-500 h-10"
-                            />
+
+                        {framework === 'tailwind' && (
+                          <div className="relative">
+                            <input readOnly value='<script src="https://cdn.tailwindcss.com"></script>' className="w-full bg-zinc-50 border border-zinc-100 rounded-[12px] px-3 py-2.5 text-[10px] mono text-zinc-600 pr-10" />
                             <button
-                              onClick={() => copyToClipboard(framework === "tailwind" ? `<script src="${uploadResult.cdnUrl}"></script>` : `<link rel="stylesheet" href="${uploadResult.cdnUrl}">`, "CDN Link")}
-                              className="w-10 h-10 bg-zinc-100 hover:bg-zinc-200 rounded-[12px] flex items-center justify-center transition-colors"
+                              onClick={() => copyToClipboard('<script src="https://cdn.tailwindcss.com"></script>', "Tailwind CDN")}
+                              className="absolute right-1 top-1 w-8 h-8 hover:bg-zinc-200 rounded-lg flex items-center justify-center transition-colors"
                             >
-                              <Copy style={{ width: '14px', height: '14px', color: '#71717a' }} />
+                              <Copy style={{ width: '12px', height: '12px', color: '#71717a' }} />
                             </button>
                           </div>
                         )}
+
+                        {framework === 'bootstrap' && (
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <p className="text-[9px] font-bold text-zinc-400 uppercase mb-1 ml-1">CSS</p>
+                              <input readOnly value='<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">' className="w-full bg-zinc-50 border border-zinc-100 rounded-[12px] px-3 py-2.5 text-[10px] mono text-zinc-600 pr-10" />
+                              <button
+                                onClick={() => copyToClipboard('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">', "Bootstrap CSS")}
+                                className="absolute right-1 top-[18px] w-8 h-8 hover:bg-zinc-200 rounded-lg flex items-center justify-center transition-colors"
+                              >
+                                <Copy style={{ width: '12px', height: '12px', color: '#71717a' }} />
+                              </button>
+                            </div>
+                            <div className="relative">
+                              <p className="text-[9px] font-bold text-zinc-400 uppercase mb-1 ml-1">JS</p>
+                              <input readOnly value='<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>' className="w-full bg-zinc-50 border border-zinc-100 rounded-[12px] px-3 py-2.5 text-[10px] mono text-zinc-600 pr-10" />
+                              <button
+                                onClick={() => copyToClipboard('<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>', "Bootstrap JS")}
+                                className="absolute right-1 top-[18px] w-8 h-8 hover:bg-zinc-200 rounded-lg flex items-center justify-center transition-colors"
+                              >
+                                <Copy style={{ width: '12px', height: '12px', color: '#71717a' }} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      !uploadResult && !deployedFileName ? (
                         <button
                           onClick={uploadToGitHub}
-                          className="w-full py-2.5 bg-zinc-50 border border-zinc-200 text-zinc-600 rounded-[14px] text-xs font-bold uppercase tracking-wider hover:bg-white transition-colors"
+                          disabled={isUploading || (!cssCode && framework === "css")}
+                          className="w-full py-3 btn-primary text-white rounded-[14px] text-xs font-bold uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          {isUploading ? "Updating…" : "Update Deploy"}
+                          {isUploading ? "Deploying…" : "Push to Production →"}
                         </button>
-                      </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 bg-green-50 rounded-[14px] p-3 border border-green-100">
+                            <CheckCircle style={{ width: '16px', height: '16px', color: '#22c55e' }} />
+                            <div>
+                              <p className="text-[10px] font-bold text-green-700 uppercase tracking-wide">Active · CDN Ready</p>
+                              <p className="text-[10px] text-green-600 mono truncate max-w-[180px]">{deployedFileName}</p>
+                            </div>
+                          </div>
+                          {uploadResult?.cdnUrl && (
+                            <div className="flex gap-2">
+                              <input
+                                readOnly
+                                value={framework === "tailwind" ? `<script src="${uploadResult.cdnUrl}"></script>` : `<link rel="stylesheet" href="${uploadResult.cdnUrl}">`}
+                                className="flex-1 bg-zinc-50 border border-zinc-100 rounded-[12px] px-3 text-[10px] mono text-zinc-500 h-10"
+                              />
+                              <button
+                                onClick={() => copyToClipboard(framework === "tailwind" ? `<script src="${uploadResult.cdnUrl}"></script>` : `<link rel="stylesheet" href="${uploadResult.cdnUrl}">`, "CDN Link")}
+                                className="w-10 h-10 bg-zinc-100 hover:bg-zinc-200 rounded-[12px] flex items-center justify-center transition-colors"
+                              >
+                                <Copy style={{ width: '14px', height: '14px', color: '#71717a' }} />
+                              </button>
+                            </div>
+                          )}
+                          <button
+                            onClick={uploadToGitHub}
+                            className="w-full py-2.5 bg-zinc-50 border border-zinc-200 text-zinc-600 rounded-[14px] text-xs font-bold uppercase tracking-wider hover:bg-white transition-colors"
+                          >
+                            {isUploading ? "Updating…" : "Update Deploy"}
+                          </button>
+                        </div>
+                      )
                     )
                   ) : (
                     /* NPM MODE UI */
@@ -1261,7 +1362,16 @@ export default function HomePage() {
                       </div>
                     </div>
                     <button
-                      onClick={() => copyToClipboard(htmlCode, "HTML")}
+                      onClick={() => {
+                        const fullHtml = framework === 'tailwind'
+                          ? `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Generated Component</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n${cssCode ? `  <style>\n${cssCode}\n  </style>\n` : ''}</head>\n<body>\n${htmlCode}\n</body>\n</html>`
+                          : framework === 'bootstrap'
+                            ? `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Generated Component</title>\n  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">\n${cssCode ? `  <style>\n${cssCode}\n  </style>\n` : ''}</head>\n<body>\n${htmlCode}\n  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>\n</body>\n</html>`
+                            : uploadResult?.cdnUrl
+                              ? `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Generated Component</title>\n  <link rel="stylesheet" href="${uploadResult.cdnUrl}">\n</head>\n<body>\n${htmlCode}\n</body>\n</html>`
+                              : `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Generated Component</title>\n${cssCode ? `  <style>\n${cssCode}\n  </style>\n` : ''}</head>\n<body>\n${htmlCode}\n</body>\n</html>`;
+                        copyToClipboard(fullHtml, "Full HTML");
+                      }}
                       className="text-[10px] font-bold text-zinc-400 hover:text-black transition-colors"
                     >
                       COPY RAW
@@ -1271,7 +1381,15 @@ export default function HomePage() {
                     <span className="absolute top-3 right-3 tag-pill text-zinc-300 pointer-events-none">HTML</span>
                     <textarea
                       readOnly
-                      value={htmlCode}
+                      value={
+                        framework === 'tailwind'
+                          ? `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Generated Component</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n${cssCode ? `  <style>\n${cssCode}\n  </style>\n` : ''}</head>\n<body>\n${htmlCode}\n</body>\n</html>`
+                          : framework === 'bootstrap'
+                            ? `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Generated Component</title>\n  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">\n${cssCode ? `  <style>\n${cssCode}\n  </style>\n` : ''}</head>\n<body>\n${htmlCode}\n  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>\n</body>\n</html>`
+                            : uploadResult?.cdnUrl
+                              ? `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Generated Component</title>\n  <link rel="stylesheet" href="${uploadResult.cdnUrl}">\n</head>\n<body>\n${htmlCode}\n</body>\n</html>`
+                              : `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Generated Component</title>\n${cssCode ? `  <style>\n${cssCode}\n  </style>\n` : ''}</head>\n<body>\n${htmlCode}\n</body>\n</html>`
+                      }
                       className="w-full h-[108px] bg-zinc-50 border border-zinc-100 rounded-[16px] p-4 mono text-[10px] text-zinc-500 resize-none outline-none focus:bg-white transition-colors"
                       placeholder="Generated markup will appear here..."
                     />
@@ -1413,7 +1531,7 @@ export default function HomePage() {
                           <div className="flex-1 relative overflow-hidden bg-zinc-50/80">
                             <iframe
                               title="Website Showcase"
-                              srcDoc={site.html ? site.html.replace('</head>', '<style>::-webkit-scrollbar { display: none !important; width: 0 !important; } body { -ms-overflow-style: none !important; scrollbar-width: none !important; transform: scale(0.4); transform-origin: top center; height: 250%; width: 250%; }</style></head>') : ''}
+                              srcDoc={site.html ? site.html.replace('</head>', '<style>::-webkit-scrollbar { display: none !important; width: 0 !important; } body { margin: 0; padding: 0; -ms-overflow-style: none !important; scrollbar-width: none !important; transform: scale(0.25); transform-origin: top left; width: 400%; height: 400%; overflow: hidden; }</style></head>') : ''}
                               className="w-full h-full border-none pointer-events-none transition-transform duration-700 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
