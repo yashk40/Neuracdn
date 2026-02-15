@@ -44,8 +44,7 @@ export default function Home() {
     fileName: "index.html",
     code: `<!-- 1. Include the CDN link -->
 <link rel="stylesheet" 
-href=
-"cdn.jsdelivr.net/gh/neuracdn/CDN@main/animation-1771189205835-u753ye.css">
+href="https://cdn.jsdelivr.net/gh/neuracdn/CDN@main/animation-1771189205835-u753ye.css">
 
 <!-- 2. Use the markup -->
 <button class="neura-btn-glow">
@@ -193,7 +192,7 @@ export function CodePreview() {
                       ))}
                     </div>
                   ) : (
-                    <pre className="text-foreground/80 leading-[1.8] whitespace-pre-wrap">
+                    <pre className="text-foreground/80 leading-[1.8] whitespace-pre-wrap break-all">
                       <code className={`language-${codeSteps[activeStep].language}`}>
                         {codeSteps[activeStep].code as string}
                       </code>
