@@ -1,24 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
-    const { searchParams } = new URL(req.url);
-    const prompt = searchParams.get("prompt");
-
-    if (!prompt) {
-        return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
-    }
-
     try {
-        const externalUrl = `http://srv1358945.hstgr.cloud:4000/component?prompt=${encodeURIComponent(prompt)}`;
+        const externalUrl = `http://srv1358945.hstgr.cloud:4000/component`;
         const res = await fetch(externalUrl);
+        console.log(`Component Fetch Status: ${res.status}`);
 
         if (!res.ok) {
-            return NextResponse.json({ error: "Failed to fetch component from server" }, { status: res.status });
+            return NextResponse.json({ error: `Server returned ${res.status}` }, { status: res.status });
         }
 
-        const data = await res.json();
-        // The external server returns { html, css } which matches our needs
-        return NextResponse.json(data);
+        const text = await res.text();
+        console.log(`Component received ${text.length} characters`);
+
+        try {
+            // Try to parse as JSON first
+            const data = JSON.parse(text);
+            return NextResponse.json(data);
+        } catch (e) {
+            // Check for the specific "html: `...`, css: `...`" format
+            const htmlMatch = text.match(/html:\s*`([\s\S]*?)`/);
+            const cssMatch = text.match(/css:\s*`([\s\S]*?)`/);
+
+            if (htmlMatch || cssMatch) {
+                return NextResponse.json({
+                    html: htmlMatch ? htmlMatch[1] : "",
+                    css: cssMatch ? cssMatch[1] : ""
+                });
+            }
+
+            // If not JSON and not the specific format, return as raw response
+            return NextResponse.json({ response: text });
+        }
     } catch (error: any) {
         console.error("Component Fetch Error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

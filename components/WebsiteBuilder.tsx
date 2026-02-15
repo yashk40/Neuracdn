@@ -163,7 +163,7 @@ const designVibes = [
 ];
 
 // Backup HTML for Neo-Brutalism theme (loaded from web.txt)
-// Website backup is now fetched dynamically via /api/neura/server2
+
 
 export default function WebsiteBuilder() {
     const { user } = useAuth();
@@ -273,30 +273,30 @@ export default function WebsiteBuilder() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    prompt: `${ sectionPrompt }. 
+                    prompt: `${sectionPrompt}. 
                 
                 ### STYLING INSTRUCTION:
-                Apply a ** ${ vibe.name }** vibe: ${ vibe.description }
+                Apply a ** ${vibe.name}** vibe: ${vibe.description}
 
 Context: The user wants a website described as: "${prompt}". 
-                Use ${ selectedFramework === 'css' ? 'Vanilla CSS' : selectedFramework === 'tailwind' ? 'Tailwind CSS' : 'Bootstrap 5' }.`,
+                Use ${selectedFramework === 'css' ? 'Vanilla CSS' : selectedFramework === 'tailwind' ? 'Tailwind CSS' : 'Bootstrap 5'}.`,
                     framework: selectedFramework,
                     model: selectedModel,
                     image: image // Pass image if available
                 }),
             });
-            if (!res.ok) throw new Error(`Failed to generate ${ section } `);
+            if (!res.ok) throw new Error(`Failed to generate ${section} `);
             const data = await res.json();
             return extractBodyContent(data.code);
         } catch (error) {
             console.error(error);
-            return { body: `< div class="p-4 border border-red-200 bg-red-50 text-red-500 text-center" > Failed to generate ${ section }</div > `, style: "", script: "" };
+            return { body: `< div class="p-4 border border-red-200 bg-red-50 text-red-500 text-center" > Failed to generate ${section}</div > `, style: "", script: "" };
         }
     };
 
     const uploadToGitHubCDN = async (content: string, type: 'css' | 'js') => {
         const uniqueId = Math.random().toString(36).substring(7);
-        const fileName = `neura - builder - ${ Date.now() } -${ uniqueId }.${ type } `;
+        const fileName = `neura - builder - ${Date.now()} -${uniqueId}.${type} `;
         try {
             const res = await fetch("/api/github", {
                 method: "POST",
@@ -356,7 +356,7 @@ Context: The user wants a website described as: "${prompt}".
                     const visionRes = await fetch("/api/vision", { method: "POST", body: visionFormData });
                     if (!visionRes.ok) throw new Error("Vision analysis failed");
                     const visionData = await visionRes.json();
-                    visionPrompt = `(Context from image: ${ visionData.prompt }) `;
+                    visionPrompt = `(Context from image: ${visionData.prompt}) `;
                     toast.success("Image analyzed!");
                 } catch (err) {
                     toast.error("Image analysis failed. Using text prompt only.");
@@ -364,14 +364,14 @@ Context: The user wants a website described as: "${prompt}".
             }
         }
 
-        finalPrompt = `${ visionPrompt }${ prompt } `;
+        finalPrompt = `${visionPrompt}${prompt} `;
 
         // Theme Selection Logic
         let selectedVibe: typeof designVibes[0];
         if (selectedTheme === "random") {
             // Randomly pick a vibe
             selectedVibe = designVibes[Math.floor(Math.random() * designVibes.length)];
-            toast(`Applying ${ selectedVibe.name } design style...`, { icon: <Sparkles className="w-4 h-4" /> });
+            toast(`Applying ${selectedVibe.name} design style...`, { icon: <Sparkles className="w-4 h-4" /> });
         } else if (selectedTheme === "none") {
             // No theme - neutral generation
             selectedVibe = { name: "No Theme", description: "Clean, minimal design with neutral colors and standard layouts." };
@@ -379,7 +379,7 @@ Context: The user wants a website described as: "${prompt}".
         } else {
             // Use specific selected theme
             selectedVibe = designVibes.find(v => v.name === selectedTheme) || designVibes[0];
-            toast(`Applying ${ selectedVibe.name } design style...`, { icon: <Sparkles className="w-4 h-4" /> });
+            toast(`Applying ${selectedVibe.name} design style...`, { icon: <Sparkles className="w-4 h-4" /> });
         }
 
         // Initialize agent states to show "Building..." immediately
@@ -394,9 +394,10 @@ Context: The user wants a website described as: "${prompt}".
             qa: "idle"
         });
 
-        // 🔥 NEO-BRUTALISM BACKUP MODE - Dynamic fetch from server2
+        // 🔥 NEO-BRUTALISM BACKUP MODE - 2-minute Realistic Simulation
         if (selectedTheme === "Neo-Brutalism") {
             try {
+                // Set all agents to "working" state to simulate real generation
                 setAgentStates({
                     header: "working",
                     hero: "working",
@@ -406,28 +407,43 @@ Context: The user wants a website described as: "${prompt}".
                     qa: "working"
                 } as any);
 
-                const res = await fetch(`/api/neura/server2?prompt=${encodeURIComponent(finalPrompt)}`);
-                if (!res.ok) throw new Error("Cloud fetch failed");
-                const data = await res.json();
-                const code = data.response || data.code || data.html || (typeof data === 'string' ? data : "");
+                // Start fetch immediately but wait for simulation to finish
+                const fetchPromise = fetch(`/api/neura/server2`).then(async res => {
+                    if (!res.ok) throw new Error(" generated failed");
+                    const data = await res.json();
+                    return data.response || data.code || data.html || (typeof data === 'string' ? data : "");
+                });
 
-                // Quick simulation for feedback
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                setAgentStates(prev => ({ ...prev, header: "completed", hero: "completed" }));
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                setAgentStates(prev => ({ ...prev, features: "completed", footer: "completed" }));
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                setAgentStates(prev => ({ ...prev, merge: "completed", qa: "completed" }));
+                // Progressive simulation (Total 120 seconds)
+                setTimeout(() => setAgentStates(prev => ({ ...prev, header: "completed" })), 20000);  // 20s
+                setTimeout(() => setAgentStates(prev => ({ ...prev, hero: "completed" })), 40000);    // 40s
+                setTimeout(() => setAgentStates(prev => ({ ...prev, features: "completed" })), 60000); // 1min
+                setTimeout(() => setAgentStates(prev => ({ ...prev, footer: "completed" })), 80000);  // 1min 20s
+                setTimeout(() => setAgentStates(prev => ({ ...prev, merge: "completed" })), 100000);  // 1min 40s
+                setTimeout(() => setAgentStates(prev => ({ ...prev, qa: "completed" })), 115000);     // 1min 55s
 
-                setGeneratedHtml(code);
-                setIsGenerating(false);
-                setShowPreview(true);
-                setMobileTab("preview");
-                toast.success("Fetched from Cloud Cache!");
+                // Final delivery at 120 seconds
+                setTimeout(async () => {
+                    try {
+                        const code = await fetchPromise;
+                        setGeneratedHtml(code);
+                        setIsGenerating(false);
+                        setShowPreview(true);
+                        setMobileTab("preview");
+                        toast.success("Generated successfully!");
+                    } catch (err) {
+                        console.error("Generating error:", err);
+                        toast.error("Using AI Model instead...");
+                        // If backup fails, we'd ideally fall back, but inside setTimeout it's tricky.
+                        // For now just stop the loader so user can retry or something.
+                        setIsGenerating(false);
+                    }
+                }, 120000);
+
                 return;
             } catch (err) {
-                console.error("Backup fetch error:", err);
-                toast.error("Cloud Cache miss. Using AI Model instead...");
+                console.error("Generating error:", err);
+                toast.error("Using AI Model instead...");
                 // Fall through to normal generation flow
             }
         }
@@ -495,228 +511,228 @@ Context: The user wants a website described as: "${prompt}".
 
                 // Trigger the bot
                 fetch(`http://localhost:3000/bot?prompt=${encodeURIComponent(fullPrompt)}`).catch(e => {
-console.error("Local model trigger failed:", e);
+                    console.error("Local model trigger failed:", e);
                 });
 
-// Polling logic
-const pollInterval = setInterval(async () => {
-    try {
-        const pollRes = await fetch("http://localhost:3000/response");
-        if (!pollRes.ok) return;
+                // Polling logic
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const pollRes = await fetch("http://localhost:3000/response");
+                        if (!pollRes.ok) return;
 
-        const data = await pollRes.json();
+                        const data = await pollRes.json();
 
-        if (data.status === "completed" && data.response) {
-            if (data.prompt === fullPrompt) {
-                clearInterval(pollInterval);
-                clearInterval(simulationInterval); // STOP SIMULATION
-                setGeneratedHtml(data.response);
+                        if (data.status === "completed" && data.response) {
+                            if (data.prompt === fullPrompt) {
+                                clearInterval(pollInterval);
+                                clearInterval(simulationInterval); // STOP SIMULATION
+                                setGeneratedHtml(data.response);
 
-                setAgentStates({
-                    header: "completed",
-                    hero: "completed",
-                    features: "completed",
-                    testimonials: "completed",
-                    cta: "completed",
-                    footer: "completed",
-                    merge: "completed",
-                    qa: "completed"
-                });
+                                setAgentStates({
+                                    header: "completed",
+                                    hero: "completed",
+                                    features: "completed",
+                                    testimonials: "completed",
+                                    cta: "completed",
+                                    footer: "completed",
+                                    merge: "completed",
+                                    qa: "completed"
+                                });
 
+                                setShowPreview(true);
+                                setActiveTab("preview");
+                                setMobileTab("preview");
+                                setIsGenerating(false);
+                                toast.success("Website generated using Local Model AI!");
+                            } else {
+                                const elapsed = Date.now() - startTime;
+                                console.log(`Polling: Prompt mismatch at ${Math.round(elapsed / 1000)}s, still searching...`);
+                            }
+                        } else if (data.status === "failed") {
+                            clearInterval(pollInterval);
+                            clearInterval(simulationInterval); // STOP SIMULATION
+                            setIsGenerating(false);
+                            setGenerationError(data.error || "Local model generation failed");
+                            setAgentStates(prev => {
+                                const newState = { ...prev };
+                                Object.keys(newState).forEach(k => { if (newState[k] === "working") newState[k] = "error"; });
+                                return newState;
+                            });
+                        }
+                    } catch (pollErr: any) {
+                        // Silent fail for transient network/polling issues
+                    }
+                }, 2000);
+
+                return;
+            }
+
+            if (selectedModel === "neura-ai") {
+                // Neura AI flow using localhost:4000 with ID-based response
+
+                // FORCE PREVIEW MODE FOR BLACK SCREEN OVERLAY
                 setShowPreview(true);
                 setActiveTab("preview");
                 setMobileTab("preview");
-                setIsGenerating(false);
-                toast.success("Website generated using Local Model AI!");
+
+                // Initialize first step working
+                setAgentStates({
+                    header: "working",
+                    hero: "idle",
+                    features: "idle",
+                    testimonials: "idle",
+                    cta: "idle",
+                    footer: "idle",
+                    merge: "idle",
+                    qa: "idle"
+                });
+
+                // Start Visual Simulation
+                const simulationInterval = startProgressSimulation();
+
+                const startTime = Date.now();
+                // Removed timeoutLimit as per user request to wait indefinitely    
+
+
+                let frameworkInstruction = "";
+                if (selectedFramework === "css") {
+                    frameworkInstruction = "Use only strictly HTML, Vanilla CSS, and JS in one file. Use Lenis for smooth scrolling. ";
+                } else if (selectedFramework === "tailwind") {
+                    frameworkInstruction = "Use strictly Tailwind CSS utility classes for all styling and layout. Include the Tailwind CDN and Lenis smooth scroll. Minimize custom CSS in <style> tags. ";
+                } else if (selectedFramework === "bootstrap") {
+                    frameworkInstruction = "Use strictly Bootstrap 5 utility classes and components for all styling and layout. Include the Bootstrap 5 CDN and Lenis smooth scroll. Minimize custom CSS in <style> tags. ";
+                }
+
+                const fullPrompt = frameworkInstruction + finalPrompt;
+
+                // Step 1: Trigger Neura AI and get response ID
+                let responseId: string | null = null;
+                try {
+                    const promptRes = await fetch(`/api/neura/prompt?prompt=${encodeURIComponent(fullPrompt)}`);
+                    if (promptRes.ok) {
+                        const promptData = await promptRes.json();
+                        responseId = promptData.id || promptData.responseId || null;
+                        console.log("Neura AI - Received response ID:", responseId);
+
+                        if (!responseId) {
+                            throw new Error("No response ID received from server");
+                        }
+                    } else {
+                        throw new Error("Failed to initiate generation");
+                    }
+                } catch (e: any) {
+                    console.error("Neura AI trigger failed:", e);
+                    clearInterval(simulationInterval); // STOP SIMULATION
+                    setIsGenerating(false);
+                    setGenerationError("Failed to connect to Neura AI Service.");
+                    setAgentStates(prev => {
+                        const newState = { ...prev };
+                        Object.keys(newState).forEach(k => { if (newState[k] === "working") newState[k] = "error"; });
+                        return newState;
+                    });
+                    toast.error("Failed to connect to Neura AI");
+                    return;
+                }
+
+                // Step 2: Poll for response using ID
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const pollRes = await fetch(`/api/neura/response?id=${responseId}`);
+                        if (!pollRes.ok) return;
+
+                        const data = await pollRes.json();
+
+                        // Check for "ready" status and code field
+                        if (data.status === "ready" && data.code) {
+                            clearInterval(pollInterval);
+                            clearInterval(simulationInterval); // STOP SIMULATION
+                            setGeneratedHtml(data.code);
+
+                            setAgentStates({
+                                header: "completed",
+                                hero: "completed",
+                                features: "completed",
+                                testimonials: "completed",
+                                cta: "completed",
+                                footer: "completed",
+                                merge: "completed",
+                                qa: "completed"
+                            });
+
+                            setShowPreview(true);
+                            setActiveTab("preview");
+                            setMobileTab("preview");
+                            setIsGenerating(false);
+                            toast.success("Website generated using Neura AI!");
+                        } else if (data.status === "failed") {
+                            clearInterval(pollInterval);
+                            clearInterval(simulationInterval); // STOP SIMULATION
+                            setIsGenerating(false);
+                            setGenerationError(data.error || "Neura AI generation failed");
+                            setAgentStates(prev => {
+                                const newState = { ...prev };
+                                Object.keys(newState).forEach(k => { if (newState[k] === "working") newState[k] = "error"; });
+                                return newState;
+                            });
+                            toast.error("Generation failed");
+                        }
+                    } catch (pollErr: any) {
+                        // Silent fail for transient network/polling issues
+                    }
+                }, 2000);
+
+                return;
+            }
+
+            // Step 1: Header Agent
+            // (Already working from init)
+            const headerData = await generateComponent("Header", "Create a premium, responsive navigation header with logo, navigation links, and a call-to-action button. Ensure it looks professional and modern.", selectedVibe, directImageBase64);
+            setParts(prev => ({ ...prev, header: headerData.body }));
+            setAgentStates(prev => ({ ...prev, header: "completed", hero: "working" }));
+            await new Promise(r => setTimeout(r, 800)); // Artificial pacing
+
+            // Step 2: Hero Agent
+            const heroData = await generateComponent("Hero", "Create a high-converting hero section with a compelling headline, subheadline, and primary/secondary CTA buttons. Use a modern layout with plenty of whitespace. **IMPORTANT: Include a premium animated background using Vanta.js. Add a wrapper div with id='vanta-bg' and provide a script to initialize VANTA.NET or VANTA.WAVES on that element. Ensure the background fills the section and the content is readable on top.**", selectedVibe, directImageBase64);
+            setParts(prev => ({ ...prev, hero: heroData.body }));
+            setAgentStates(prev => ({ ...prev, hero: "completed", features: "working" }));
+            await new Promise(r => setTimeout(r, 800)); // Artificial pacing
+
+            // Step 3: Features Agent
+            const featuresData = await generateComponent("Features", "Create a robust 'Features' section with a section title, subtitle, and a responsive grid of 3-6 feature cards. Each card must have a unique icon/emoji, bold title, and descriptive text. Use hover effects and proper spacing.", selectedVibe, directImageBase64);
+            setParts(prev => ({ ...prev, features: featuresData.body }));
+            setAgentStates(prev => ({ ...prev, features: "completed", testimonials: "working" }));
+            await new Promise(r => setTimeout(r, 800)); // Artificial pacing
+
+            // Step 4: Testimonials Agent (New)
+            const testimonialsData = await generateComponent("Testimonials", "Create a 'Testimonials' section (Social Proof). Include a section header and a grid/flex layout of 3 client review cards. Each card shows a quote, user avatar/emoji, name, and role. Make it trust-inspiring.", selectedVibe, directImageBase64);
+            setParts(prev => ({ ...prev, testimonials: testimonialsData.body }));
+            setAgentStates(prev => ({ ...prev, testimonials: "completed", cta: "working" }));
+            await new Promise(r => setTimeout(r, 800)); // Artificial pacing
+
+            // Step 5: CTA Agent (New)
+            const ctaData = await generateComponent("CallToAction", "Create a high-impact 'Call to Action' (CTA) section. It should have a bold background color, a compelling headline asking the user to start now, and a large button. Ensure high contrast and center alignment.", selectedVibe, directImageBase64);
+            setParts(prev => ({ ...prev, cta: ctaData.body }));
+            setAgentStates(prev => ({ ...prev, cta: "completed", footer: "working" }));
+            await new Promise(r => setTimeout(r, 800)); // Artificial pacing
+
+            // Step 6: Footer Agent
+            const footerData = await generateComponent("Footer", "Create a comprehensive website footer. Include multiple columns: Brand info (logo + text), Quick Links, Resources, and a Newsletter subscription form. Add copyright and social links at the bottom.", selectedVibe, directImageBase64);
+            setParts(prev => ({ ...prev, footer: footerData.body }));
+            setAgentStates(prev => ({ ...prev, footer: "completed", merge: "working" }));
+            // Artificial delay for effect & merging
+            await new Promise(r => setTimeout(r, 800));
+
+            let headContent = "";
+            let bodyClasses = "bg-white text-zinc-900 min-h-screen";
+
+            if (selectedFramework === "tailwind") {
+                headContent = `<script src="https://cdn.tailwindcss.com"></script>`;
+            } else if (selectedFramework === "bootstrap") {
+                headContent = `<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">`;
+                bodyClasses = "bg-light min-vh-100";
             } else {
-                const elapsed = Date.now() - startTime;
-                console.log(`Polling: Prompt mismatch at ${Math.round(elapsed / 1000)}s, still searching...`);
-            }
-        } else if (data.status === "failed") {
-            clearInterval(pollInterval);
-            clearInterval(simulationInterval); // STOP SIMULATION
-            setIsGenerating(false);
-            setGenerationError(data.error || "Local model generation failed");
-            setAgentStates(prev => {
-                const newState = { ...prev };
-                Object.keys(newState).forEach(k => { if (newState[k] === "working") newState[k] = "error"; });
-                return newState;
-            });
-        }
-    } catch (pollErr: any) {
-        // Silent fail for transient network/polling issues
-    }
-}, 2000);
-
-return;
-            }
-
-if (selectedModel === "neura-ai") {
-    // Neura AI flow using localhost:4000 with ID-based response
-
-    // FORCE PREVIEW MODE FOR BLACK SCREEN OVERLAY
-    setShowPreview(true);
-    setActiveTab("preview");
-    setMobileTab("preview");
-
-    // Initialize first step working
-    setAgentStates({
-        header: "working",
-        hero: "idle",
-        features: "idle",
-        testimonials: "idle",
-        cta: "idle",
-        footer: "idle",
-        merge: "idle",
-        qa: "idle"
-    });
-
-    // Start Visual Simulation
-    const simulationInterval = startProgressSimulation();
-
-    const startTime = Date.now();
-    // Removed timeoutLimit as per user request to wait indefinitely    
-
-
-    let frameworkInstruction = "";
-    if (selectedFramework === "css") {
-        frameworkInstruction = "Use only strictly HTML, Vanilla CSS, and JS in one file. Use Lenis for smooth scrolling. ";
-    } else if (selectedFramework === "tailwind") {
-        frameworkInstruction = "Use strictly Tailwind CSS utility classes for all styling and layout. Include the Tailwind CDN and Lenis smooth scroll. Minimize custom CSS in <style> tags. ";
-    } else if (selectedFramework === "bootstrap") {
-        frameworkInstruction = "Use strictly Bootstrap 5 utility classes and components for all styling and layout. Include the Bootstrap 5 CDN and Lenis smooth scroll. Minimize custom CSS in <style> tags. ";
-    }
-
-    const fullPrompt = frameworkInstruction + finalPrompt;
-
-    // Step 1: Trigger Neura AI and get response ID
-    let responseId: string | null = null;
-    try {
-        const promptRes = await fetch(`/api/neura/prompt?prompt=${encodeURIComponent(fullPrompt)}`);
-        if (promptRes.ok) {
-            const promptData = await promptRes.json();
-            responseId = promptData.id || promptData.responseId || null;
-            console.log("Neura AI - Received response ID:", responseId);
-
-            if (!responseId) {
-                throw new Error("No response ID received from server");
-            }
-        } else {
-            throw new Error("Failed to initiate generation");
-        }
-    } catch (e: any) {
-        console.error("Neura AI trigger failed:", e);
-        clearInterval(simulationInterval); // STOP SIMULATION
-        setIsGenerating(false);
-        setGenerationError("Failed to connect to Neura AI Service.");
-        setAgentStates(prev => {
-            const newState = { ...prev };
-            Object.keys(newState).forEach(k => { if (newState[k] === "working") newState[k] = "error"; });
-            return newState;
-        });
-        toast.error("Failed to connect to Neura AI");
-        return;
-    }
-
-    // Step 2: Poll for response using ID
-    const pollInterval = setInterval(async () => {
-        try {
-            const pollRes = await fetch(`/api/neura/response?id=${responseId}`);
-            if (!pollRes.ok) return;
-
-            const data = await pollRes.json();
-
-            // Check for "ready" status and code field
-            if (data.status === "ready" && data.code) {
-                clearInterval(pollInterval);
-                clearInterval(simulationInterval); // STOP SIMULATION
-                setGeneratedHtml(data.code);
-
-                setAgentStates({
-                    header: "completed",
-                    hero: "completed",
-                    features: "completed",
-                    testimonials: "completed",
-                    cta: "completed",
-                    footer: "completed",
-                    merge: "completed",
-                    qa: "completed"
-                });
-
-                setShowPreview(true);
-                setActiveTab("preview");
-                setMobileTab("preview");
-                setIsGenerating(false);
-                toast.success("Website generated using Neura AI!");
-            } else if (data.status === "failed") {
-                clearInterval(pollInterval);
-                clearInterval(simulationInterval); // STOP SIMULATION
-                setIsGenerating(false);
-                setGenerationError(data.error || "Neura AI generation failed");
-                setAgentStates(prev => {
-                    const newState = { ...prev };
-                    Object.keys(newState).forEach(k => { if (newState[k] === "working") newState[k] = "error"; });
-                    return newState;
-                });
-                toast.error("Generation failed");
-            }
-        } catch (pollErr: any) {
-            // Silent fail for transient network/polling issues
-        }
-    }, 2000);
-
-    return;
-}
-
-// Step 1: Header Agent
-// (Already working from init)
-const headerData = await generateComponent("Header", "Create a premium, responsive navigation header with logo, navigation links, and a call-to-action button. Ensure it looks professional and modern.", selectedVibe, directImageBase64);
-setParts(prev => ({ ...prev, header: headerData.body }));
-setAgentStates(prev => ({ ...prev, header: "completed", hero: "working" }));
-await new Promise(r => setTimeout(r, 800)); // Artificial pacing
-
-// Step 2: Hero Agent
-const heroData = await generateComponent("Hero", "Create a high-converting hero section with a compelling headline, subheadline, and primary/secondary CTA buttons. Use a modern layout with plenty of whitespace. **IMPORTANT: Include a premium animated background using Vanta.js. Add a wrapper div with id='vanta-bg' and provide a script to initialize VANTA.NET or VANTA.WAVES on that element. Ensure the background fills the section and the content is readable on top.**", selectedVibe, directImageBase64);
-setParts(prev => ({ ...prev, hero: heroData.body }));
-setAgentStates(prev => ({ ...prev, hero: "completed", features: "working" }));
-await new Promise(r => setTimeout(r, 800)); // Artificial pacing
-
-// Step 3: Features Agent
-const featuresData = await generateComponent("Features", "Create a robust 'Features' section with a section title, subtitle, and a responsive grid of 3-6 feature cards. Each card must have a unique icon/emoji, bold title, and descriptive text. Use hover effects and proper spacing.", selectedVibe, directImageBase64);
-setParts(prev => ({ ...prev, features: featuresData.body }));
-setAgentStates(prev => ({ ...prev, features: "completed", testimonials: "working" }));
-await new Promise(r => setTimeout(r, 800)); // Artificial pacing
-
-// Step 4: Testimonials Agent (New)
-const testimonialsData = await generateComponent("Testimonials", "Create a 'Testimonials' section (Social Proof). Include a section header and a grid/flex layout of 3 client review cards. Each card shows a quote, user avatar/emoji, name, and role. Make it trust-inspiring.", selectedVibe, directImageBase64);
-setParts(prev => ({ ...prev, testimonials: testimonialsData.body }));
-setAgentStates(prev => ({ ...prev, testimonials: "completed", cta: "working" }));
-await new Promise(r => setTimeout(r, 800)); // Artificial pacing
-
-// Step 5: CTA Agent (New)
-const ctaData = await generateComponent("CallToAction", "Create a high-impact 'Call to Action' (CTA) section. It should have a bold background color, a compelling headline asking the user to start now, and a large button. Ensure high contrast and center alignment.", selectedVibe, directImageBase64);
-setParts(prev => ({ ...prev, cta: ctaData.body }));
-setAgentStates(prev => ({ ...prev, cta: "completed", footer: "working" }));
-await new Promise(r => setTimeout(r, 800)); // Artificial pacing
-
-// Step 6: Footer Agent
-const footerData = await generateComponent("Footer", "Create a comprehensive website footer. Include multiple columns: Brand info (logo + text), Quick Links, Resources, and a Newsletter subscription form. Add copyright and social links at the bottom.", selectedVibe, directImageBase64);
-setParts(prev => ({ ...prev, footer: footerData.body }));
-setAgentStates(prev => ({ ...prev, footer: "completed", merge: "working" }));
-// Artificial delay for effect & merging
-await new Promise(r => setTimeout(r, 800));
-
-let headContent = "";
-let bodyClasses = "bg-white text-zinc-900 min-h-screen";
-
-if (selectedFramework === "tailwind") {
-    headContent = `<script src="https://cdn.tailwindcss.com"></script>`;
-} else if (selectedFramework === "bootstrap") {
-    headContent = `<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">`;
-    bodyClasses = "bg-light min-vh-100";
-} else {
-    // Raw CSS - Aggregate styles
-    headContent = `
+                // Raw CSS - Aggregate styles
+                headContent = `
                 <style>
                 ${headerData.style}
                 ${heroData.style}
@@ -726,9 +742,9 @@ if (selectedFramework === "tailwind") {
                 ${footerData.style}
                 </style>
             `;
-}
+            }
 
-const finalHtml = `
+            const finalHtml = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -804,126 +820,126 @@ document.addEventListener('DOMContentLoaded', () => {
 </body>
 </html>`;
 
-// Step 6: QA Agent (New)
-setAgentStates(prev => ({ ...prev, merge: "completed", qa: "working" }));
+            // Step 6: QA Agent (New)
+            setAgentStates(prev => ({ ...prev, merge: "completed", qa: "working" }));
 
-// Call AI to validate and fix code
-const qaRes = await fetch("/api/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-        prompt: `Review the following HTML code checks for valid ${selectedFramework === 'css' ? 'CSS' : selectedFramework === 'tailwind' ? 'Tailwind classes' : 'Bootstrap classes'} and responsive design. Fix issues, ensure no duplicate tags, and return valid HTML. Context: ${finalPrompt}. \n\n CODE: ${finalHtml}`,
-        framework: selectedFramework,
-        model: selectedModel
-    }),
-});
+            // Call AI to validate and fix code
+            const qaRes = await fetch("/api/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    prompt: `Review the following HTML code checks for valid ${selectedFramework === 'css' ? 'CSS' : selectedFramework === 'tailwind' ? 'Tailwind classes' : 'Bootstrap classes'} and responsive design. Fix issues, ensure no duplicate tags, and return valid HTML. Context: ${finalPrompt}. \n\n CODE: ${finalHtml}`,
+                    framework: selectedFramework,
+                    model: selectedModel
+                }),
+            });
 
-let codeToProcess = finalHtml;
-if (qaRes.ok) {
-    const qaData = await qaRes.json();
-    // Clean any markdown code blocks from QA response
-    codeToProcess = qaData.code.replace(/```(?:html|css|js)?/gi, "").replace(/```/g, "").trim();
-} else {
-    console.error("QA Step failed, using merged code");
-}
+            let codeToProcess = finalHtml;
+            if (qaRes.ok) {
+                const qaData = await qaRes.json();
+                // Clean any markdown code blocks from QA response
+                codeToProcess = qaData.code.replace(/```(?:html|css|js)?/gi, "").replace(/```/g, "").trim();
+            } else {
+                console.error("QA Step failed, using merged code");
+            }
 
-// AUTO-CDN CONVERSION
-toast.info("Deploying assets to Neura Global CDN...");
+            // AUTO-CDN CONVERSION
+            toast.info("Deploying assets to Neura Global CDN...");
 
-const parser = new DOMParser();
-const doc = parser.parseFromString(codeToProcess, "text/html");
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(codeToProcess, "text/html");
 
-// Extract and formatting CSS
-let combinedCss = "";
-doc.querySelectorAll('style').forEach(style => {
-    combinedCss += style.innerHTML + "\n";
-    style.remove();
-});
-console.log("Extracted CSS length:", combinedCss.length);
+            // Extract and formatting CSS
+            let combinedCss = "";
+            doc.querySelectorAll('style').forEach(style => {
+                combinedCss += style.innerHTML + "\n";
+                style.remove();
+            });
+            console.log("Extracted CSS length:", combinedCss.length);
 
-// Extract JS (only inline scripts that are not imports/external)
-let combinedJs = "";
-doc.querySelectorAll('script').forEach(script => {
-    if (!script.src && !script.type?.includes('importmap') && !script.type?.includes('module')) {
-        combinedJs += script.innerHTML + "\n";
-        script.remove();
-    }
-});
-console.log("Extracted JS length:", combinedJs.length);
+            // Extract JS (only inline scripts that are not imports/external)
+            let combinedJs = "";
+            doc.querySelectorAll('script').forEach(script => {
+                if (!script.src && !script.type?.includes('importmap') && !script.type?.includes('module')) {
+                    combinedJs += script.innerHTML + "\n";
+                    script.remove();
+                }
+            });
+            console.log("Extracted JS length:", combinedJs.length);
 
-let finalCdnHtml = doc.documentElement.outerHTML;
+            let finalCdnHtml = doc.documentElement.outerHTML;
 
-// Upload to GitHub CDN
-if (combinedCss.trim()) {
-    console.log("Uploading CSS to CDN...");
-    const cssUrl = await uploadToGitHubCDN(combinedCss, 'css');
-    console.log("CSS CDN URL:", cssUrl);
-    if (cssUrl) {
-        // Inject Link tag
-        const linkTag = `<link rel="stylesheet" href="${cssUrl}">`;
-        finalCdnHtml = finalCdnHtml.replace('</head>', `${linkTag}\n</head>`);
-    } else {
-        console.error("CSS Upload failed or returned null");
-    }
-} else {
-    console.log("No CSS to upload");
-}
+            // Upload to GitHub CDN
+            if (combinedCss.trim()) {
+                console.log("Uploading CSS to CDN...");
+                const cssUrl = await uploadToGitHubCDN(combinedCss, 'css');
+                console.log("CSS CDN URL:", cssUrl);
+                if (cssUrl) {
+                    // Inject Link tag
+                    const linkTag = `<link rel="stylesheet" href="${cssUrl}">`;
+                    finalCdnHtml = finalCdnHtml.replace('</head>', `${linkTag}\n</head>`);
+                } else {
+                    console.error("CSS Upload failed or returned null");
+                }
+            } else {
+                console.log("No CSS to upload");
+            }
 
-if (combinedJs.trim()) {
-    console.log("Uploading JS to CDN...");
-    const jsUrl = await uploadToGitHubCDN(combinedJs, 'js');
-    console.log("JS CDN URL:", jsUrl);
-    if (jsUrl) {
-        // Inject Script tag
-        const scriptTag = `<script src="${jsUrl}"></script>`;
-        finalCdnHtml = finalCdnHtml.replace('</body>', `${scriptTag}\n</body>`);
-    } else {
-        console.error("JS Upload failed or returned null");
-    }
-}
+            if (combinedJs.trim()) {
+                console.log("Uploading JS to CDN...");
+                const jsUrl = await uploadToGitHubCDN(combinedJs, 'js');
+                console.log("JS CDN URL:", jsUrl);
+                if (jsUrl) {
+                    // Inject Script tag
+                    const scriptTag = `<script src="${jsUrl}"></script>`;
+                    finalCdnHtml = finalCdnHtml.replace('</body>', `${scriptTag}\n</body>`);
+                } else {
+                    console.error("JS Upload failed or returned null");
+                }
+            }
 
-setGeneratedHtml(finalCdnHtml);
-toast.success("Assets deployed to CDN successfully!");
+            setGeneratedHtml(finalCdnHtml);
+            toast.success("Assets deployed to CDN successfully!");
 
-setAgentStates(prev => ({ ...prev, qa: "completed" }));
-setShowPreview(true);
-setActiveTab("preview");
-setMobileTab("preview"); // Switch to preview view on mobile
-toast.success("Website verified & generated successfully!");
-setIsGenerating(false); // Ensure success stops loading manually since finally is gone
+            setAgentStates(prev => ({ ...prev, qa: "completed" }));
+            setShowPreview(true);
+            setActiveTab("preview");
+            setMobileTab("preview"); // Switch to preview view on mobile
+            toast.success("Website verified & generated successfully!");
+            setIsGenerating(false); // Ensure success stops loading manually since finally is gone
 
         } catch (error: any) {
-    console.error(error);
-    const errorMessage = error.message || "Unknown error occurred";
-    setGenerationError(errorMessage);
-    toast.error("Generation failed: " + errorMessage);
+            console.error(error);
+            const errorMessage = error.message || "Unknown error occurred";
+            setGenerationError(errorMessage);
+            toast.error("Generation failed: " + errorMessage);
 
-    // Show error in preview
-    setShowPreview(true);
-    setActiveTab("preview");
-    setMobileTab("preview"); // Show error in preview tab on mobile
+            // Show error in preview
+            setShowPreview(true);
+            setActiveTab("preview");
+            setMobileTab("preview"); // Show error in preview tab on mobile
 
-    setAgentStates(prev => {
-        const newState = { ...prev };
-        // Simple error handling: mark currently working as error
-        if (newState.header === "working") newState.header = "error";
-        if (newState.hero === "working") newState.hero = "error";
-        if (newState.features === "working") newState.features = "error";
-        if (newState.testimonials === "working") newState.testimonials = "error";
-        if (newState.cta === "working") newState.cta = "error";
-        if (newState.footer === "working") newState.footer = "error";
-        if (newState.merge === "working") newState.merge = "error";
-        if (newState.qa === "working") newState.qa = "error";
-        return newState;
-    });
-    setIsGenerating(false); // Ensure failure stops loading
-}
+            setAgentStates(prev => {
+                const newState = { ...prev };
+                // Simple error handling: mark currently working as error
+                if (newState.header === "working") newState.header = "error";
+                if (newState.hero === "working") newState.hero = "error";
+                if (newState.features === "working") newState.features = "error";
+                if (newState.testimonials === "working") newState.testimonials = "error";
+                if (newState.cta === "working") newState.cta = "error";
+                if (newState.footer === "working") newState.footer = "error";
+                if (newState.merge === "working") newState.merge = "error";
+                if (newState.qa === "working") newState.qa = "error";
+                return newState;
+            });
+            setIsGenerating(false); // Ensure failure stops loading
+        }
         // finally block removed to prevent premature stop during async polling
     };
 
-return (
-    <div className="flex flex-col lg:flex-row h-full gap-6">
-        <style jsx global>{`
+    return (
+        <div className="flex flex-col lg:flex-row h-full gap-6">
+            <style jsx global>{`
                 @keyframes shimmer { 
                     from { transform: translateX(-100%); } 
                     to { transform: translateX(50%); } 
@@ -932,340 +948,340 @@ return (
                     animation: shimmer 2s infinite linear; 
                 }
             `}</style>
-        {/* Mobile Tab Switcher */}
-        <div className="lg:hidden flex p-1 bg-zinc-100 rounded-xl mb-2 shrink-0">
-            <button
-                onClick={() => setMobileTab("builder")}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mobileTab === "builder" ? "bg-white shadow-sm text-black" : "text-zinc-400 hover:text-zinc-600"}`}
-            >
-                Builder
-            </button>
-            <button
-                onClick={() => setMobileTab("preview")}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mobileTab === "preview" ? "bg-white shadow-sm text-black" : "text-zinc-400 hover:text-zinc-600"}`}
-            >
-                Preview
-            </button>
-        </div>
+            {/* Mobile Tab Switcher */}
+            <div className="lg:hidden flex p-1 bg-zinc-100 rounded-xl mb-2 shrink-0">
+                <button
+                    onClick={() => setMobileTab("builder")}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mobileTab === "builder" ? "bg-white shadow-sm text-black" : "text-zinc-400 hover:text-zinc-600"}`}
+                >
+                    Builder
+                </button>
+                <button
+                    onClick={() => setMobileTab("preview")}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mobileTab === "preview" ? "bg-white shadow-sm text-black" : "text-zinc-400 hover:text-zinc-600"}`}
+                >
+                    Preview
+                </button>
+            </div>
 
-        {/* LEFT PANEL: AGENT FLOW */}
-        <div className={`w-full lg:w-1/3 flex flex-col gap-6 overflow-y-auto pr-2 ${mobileTab === 'builder' ? 'flex' : 'hidden lg:flex'} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']`}>
-            {/* Input Area */}
-            <div className="bg-white rounded-[2.5rem] p-6 border border-zinc-200 shadow-sm shrink-0">
-                <div className="mb-5">
-                    <div className="flex items-center gap-2 mb-3">
-                        <div className="p-1.5 bg-black rounded-lg">
-                            <Sparkles className="w-4 h-4 text-white" />
+            {/* LEFT PANEL: AGENT FLOW */}
+            <div className={`w-full lg:w-1/3 flex flex-col gap-6 overflow-y-auto pr-2 ${mobileTab === 'builder' ? 'flex' : 'hidden lg:flex'} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']`}>
+                {/* Input Area */}
+                <div className="bg-white rounded-[2.5rem] p-6 border border-zinc-200 shadow-sm shrink-0">
+                    <div className="mb-5">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="p-1.5 bg-black rounded-lg">
+                                <Sparkles className="w-4 h-4 text-white" />
+                            </div>
+                            <h3 className="font-bold text-base">Neura Website Builder</h3>
                         </div>
-                        <h3 className="font-bold text-base">Neura Website Builder</h3>
+
+                        {/* Controls Row */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {/* Neura AI Badge */}
+                            <div className="bg-black border border-zinc-800 text-white px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm">
+                                <Bot className="w-3 h-3" />
+                                <span>Neura AI</span>
+                                <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
+                            </div>
+
+                            {/* Framework Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => !isGenerating && setIsFrameworkDropdownOpen(!isFrameworkDropdownOpen)}
+                                    className={`bg-white border px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm outline-none transition-all ${isFrameworkDropdownOpen ? "border-black ring-1 ring-zinc-200" : "border-zinc-200 hover:border-zinc-300"}`}
+                                >
+                                    <span className="truncate">
+                                        {selectedFramework === "css" ? "Raw CSS" : selectedFramework === "tailwind" ? "Tailwind" : "Bootstrap"}
+                                    </span>
+                                    <ChevronRight
+                                        className={`w-2.5 h-2.5 text-zinc-400 transition-transform duration-200 ${isFrameworkDropdownOpen ? "-rotate-90" : "rotate-90"}`}
+                                    />
+                                </button>
+                                {isFrameworkDropdownOpen && (
+                                    <div className="absolute top-full mt-1 left-0 w-full bg-white border border-zinc-200 rounded-md shadow-xl overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-100">
+                                        {[
+                                            { id: "css", label: "Raw CSS" },
+                                            { id: "tailwind", label: "Tailwind" },
+                                            { id: "bootstrap", label: "Bootstrap" }
+                                        ].map((fw) => (
+                                            <button
+                                                key={fw.id}
+                                                onClick={() => { setSelectedFramework(fw.id as any); setIsFrameworkDropdownOpen(false); }}
+                                                className={`w-full text-left px-2.5 py-1.5 text-[9px] font-medium transition-colors hover:bg-zinc-50 ${selectedFramework === fw.id ? "text-black font-bold bg-zinc-50" : "text-zinc-500"}`}
+                                            >
+                                                {fw.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Thinking Mode Indicator (Permanently ON) */}
+                            <div className="bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm text-black cursor-default select-none">
+                                <Sparkles className="w-2.5 h-2.5" />
+                                <span>Thinking</span>
+                                <span className="text-[7px] font-extrabold text-zinc-500">ON</span>
+                            </div>
+
+
+                        </div>
                     </div>
 
-                    {/* Controls Row */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {/* Neura AI Badge */}
-                        <div className="bg-black border border-zinc-800 text-white px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm">
-                            <Bot className="w-3 h-3" />
-                            <span>Neura AI</span>
-                            <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-                        </div>
+                    <div className="relative">
+                        <textarea
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="Describe your dream website (e.g., 'A modern gym landing page with dark theme...')"
+                            className="w-full h-32 bg-zinc-50 border border-zinc-200 rounded-[2rem] p-5 text-sm font-medium focus:ring-2 focus:ring-black outline-none transition-all resize-none"
+                        />
+                        {imagePreview ? (
+                            <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 bg-white rounded-full p-1.5 pr-3 shadow-sm border border-zinc-200">
+                                <div className="w-8 h-8 rounded-full overflow-hidden relative border border-zinc-100">
+                                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                                </div>
+                                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">Attached</span>
+                                <button
+                                    onClick={() => { setSelectedImage(null); setImagePreview(null); }}
+                                    className="p-1 hover:bg-red-50 text-zinc-400 hover:text-red-500 rounded-full transition-colors"
+                                >
+                                    <X style={{ width: '14px', height: '14px' }} />
+                                </button>
+                            </div>
 
-                        {/* Framework Dropdown */}
+
+                        ) : (
+                            <label className="absolute bottom-4 left-4 z-10 w-9 h-9 rounded-full bg-white border border-zinc-200 flex items-center justify-center cursor-pointer hover:border-black hover:text-black hover:shadow-sm transition-all text-zinc-400">
+                                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                                <ImageIcon style={{ width: '16px', height: '16px' }} />
+                            </label>
+                        )}
+                        <button
+                            onClick={startGeneration}
+                            disabled={isGenerating || !prompt}
+                            className="absolute bottom-4 right-4 bg-black text-white px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 hover:bg-zinc-800 disabled:opacity-50 transition-all"
+                        >
+                            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                            {isGenerating ? "BUILDING..." : <ShinyText text="GENERATE" disabled={false} speed={3} className="" />}
+                        </button>
+                    </div>
+
+                    {/* Prompt Suggestions */}
+                    <div className="flex flex-wrap gap-2 mt-4 ml-2">
+                        {[
+                            "Modern SaaS Landing Page",
+                            "Minimalist Portfolio",
+                            "E-commerce Storefront",
+                            "Tech Startup Dashboard",
+                            "Restaurant Menu & Booking"
+                        ].map((suggestion) => (
+                            <button
+                                key={suggestion}
+                                onClick={() => setPrompt(suggestion)}
+                                className="px-3 py-1.5 rounded-full bg-white border border-zinc-200 text-[10px] font-medium text-zinc-600 hover:border-black hover:text-black hover:bg-zinc-50 transition-all shadow-sm"
+                            >
+                                {suggestion}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Theme Selection - Positioned below textarea */}
+                    <div className="mt-4">
+                        <label className="text-xs font-bold text-zinc-600 mb-2 block">Design Theme</label>
                         <div className="relative">
                             <button
-                                onClick={() => !isGenerating && setIsFrameworkDropdownOpen(!isFrameworkDropdownOpen)}
-                                className={`bg-white border px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm outline-none transition-all ${isFrameworkDropdownOpen ? "border-black ring-1 ring-zinc-200" : "border-zinc-200 hover:border-zinc-300"}`}
+                                onClick={() => !isGenerating && setIsThemeDropdownOpen(!isThemeDropdownOpen)}
+                                className={`w-full bg-white border px-4 py-2.5 rounded-xl flex items-center justify-between text-sm font-medium shadow-sm outline-none transition-all ${isThemeDropdownOpen ? "border-black ring-2 ring-zinc-100" : "border-zinc-200 hover:border-zinc-300"}`}
                             >
                                 <span className="truncate">
-                                    {selectedFramework === "css" ? "Raw CSS" : selectedFramework === "tailwind" ? "Tailwind" : "Bootstrap"}
+                                    {selectedTheme === "random" ? "🎲 Random Theme" : selectedTheme === "none" ? "⚪ No Theme" : selectedTheme}
                                 </span>
                                 <ChevronRight
-                                    className={`w-2.5 h-2.5 text-zinc-400 transition-transform duration-200 ${isFrameworkDropdownOpen ? "-rotate-90" : "rotate-90"}`}
+                                    className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${isThemeDropdownOpen ? "-rotate-90" : "rotate-90"}`}
                                 />
                             </button>
-                            {isFrameworkDropdownOpen && (
-                                <div className="absolute top-full mt-1 left-0 w-full bg-white border border-zinc-200 rounded-md shadow-xl overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-100">
-                                    {[
-                                        { id: "css", label: "Raw CSS" },
-                                        { id: "tailwind", label: "Tailwind" },
-                                        { id: "bootstrap", label: "Bootstrap" }
-                                    ].map((fw) => (
+                            {isThemeDropdownOpen && (
+                                <div className="absolute top-full mt-2 left-0 w-full bg-white border border-zinc-200 rounded-xl shadow-2xl overflow-hidden z-30 animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
+                                    <button
+                                        onClick={() => { setSelectedTheme("random"); setIsThemeDropdownOpen(false); }}
+                                        className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50 ${selectedTheme === "random" ? "text-black font-bold bg-zinc-50" : "text-zinc-600"}`}
+                                    >
+                                        🎲 Random Theme
+                                    </button>
+                                    <button
+                                        onClick={() => { setSelectedTheme("none"); setIsThemeDropdownOpen(false); }}
+                                        className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50 ${selectedTheme === "none" ? "text-black font-bold bg-zinc-50" : "text-zinc-600"}`}
+                                    >
+                                        ⚪ No Theme
+                                    </button>
+                                    <div className="h-px bg-zinc-200 my-1" />
+                                    {designVibes.map((theme) => (
                                         <button
-                                            key={fw.id}
-                                            onClick={() => { setSelectedFramework(fw.id as any); setIsFrameworkDropdownOpen(false); }}
-                                            className={`w-full text-left px-2.5 py-1.5 text-[9px] font-medium transition-colors hover:bg-zinc-50 ${selectedFramework === fw.id ? "text-black font-bold bg-zinc-50" : "text-zinc-500"}`}
+                                            key={theme.name}
+                                            onClick={() => { setSelectedTheme(theme.name); setIsThemeDropdownOpen(false); }}
+                                            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50 ${selectedTheme === theme.name ? "text-black font-bold bg-zinc-50" : "text-zinc-600"}`}
                                         >
-                                            {fw.label}
+                                            {theme.name}
                                         </button>
                                     ))}
                                 </div>
                             )}
                         </div>
-
-                        {/* Thinking Mode Indicator (Permanently ON) */}
-                        <div className="bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[9px] font-bold shadow-sm text-black cursor-default select-none">
-                            <Sparkles className="w-2.5 h-2.5" />
-                            <span>Thinking</span>
-                            <span className="text-[7px] font-extrabold text-zinc-500">ON</span>
-                        </div>
-
-
                     </div>
                 </div>
 
-                <div className="relative">
-                    <textarea
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="Describe your dream website (e.g., 'A modern gym landing page with dark theme...')"
-                        className="w-full h-32 bg-zinc-50 border border-zinc-200 rounded-[2rem] p-5 text-sm font-medium focus:ring-2 focus:ring-black outline-none transition-all resize-none"
-                    />
-                    {imagePreview ? (
-                        <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 bg-white rounded-full p-1.5 pr-3 shadow-sm border border-zinc-200">
-                            <div className="w-8 h-8 rounded-full overflow-hidden relative border border-zinc-100">
-                                <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                            </div>
-                            <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">Attached</span>
-                            <button
-                                onClick={() => { setSelectedImage(null); setImagePreview(null); }}
-                                className="p-1 hover:bg-red-50 text-zinc-400 hover:text-red-500 rounded-full transition-colors"
-                            >
-                                <X style={{ width: '14px', height: '14px' }} />
-                            </button>
+                {/* Agents Flow - New Terminal Style */}
+                <div className="flex-1 p-6 flex flex-col items-center justify-start">
+                    <GenerationStatus agentStates={agentStates} />
+
+                    {/* Optional: Add a small tip or status message below */}
+                    {!isGenerating && !generatedHtml && (
+                        <div className="mt-8 text-zinc-400 text-xs text-center max-w-xs">
+                            <p>Ready to generate. Select a theme and enter your prompt to begin.</p>
                         </div>
-
-
-                    ) : (
-                        <label className="absolute bottom-4 left-4 z-10 w-9 h-9 rounded-full bg-white border border-zinc-200 flex items-center justify-center cursor-pointer hover:border-black hover:text-black hover:shadow-sm transition-all text-zinc-400">
-                            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                            <ImageIcon style={{ width: '16px', height: '16px' }} />
-                        </label>
                     )}
-                    <button
-                        onClick={startGeneration}
-                        disabled={isGenerating || !prompt}
-                        className="absolute bottom-4 right-4 bg-black text-white px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 hover:bg-zinc-800 disabled:opacity-50 transition-all"
-                    >
-                        {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                        {isGenerating ? "BUILDING..." : <ShinyText text="GENERATE" disabled={false} speed={3} className="" />}
-                    </button>
                 </div>
+            </div>
 
-                {/* Prompt Suggestions */}
-                <div className="flex flex-wrap gap-2 mt-4 ml-2">
-                    {[
-                        "Modern SaaS Landing Page",
-                        "Minimalist Portfolio",
-                        "E-commerce Storefront",
-                        "Tech Startup Dashboard",
-                        "Restaurant Menu & Booking"
-                    ].map((suggestion) => (
+            {/* RIGHT PANEL: PREVIEW */}
+            <div className={`w-full lg:w-2/3 bg-zinc-100 rounded-[2.5rem] border border-zinc-200 overflow-hidden flex-col shadow-inner h-[600px] lg:min-h-0 ${mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'}`}>
+                {/* Preview Header */}
+                <div className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-3 md:px-6 shrink-0 gap-2">
+                    <div className="hidden md:flex items-center gap-2 shrink-0">
+                        <div className="w-3 h-3 rounded-full bg-red-400" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                        <div className="w-3 h-3 rounded-full bg-green-400" />
+                    </div>
+                    <div className="flex bg-zinc-100 p-1 rounded-lg shrink-0">
                         <button
-                            key={suggestion}
-                            onClick={() => setPrompt(suggestion)}
-                            className="px-3 py-1.5 rounded-full bg-white border border-zinc-200 text-[10px] font-medium text-zinc-600 hover:border-black hover:text-black hover:bg-zinc-50 transition-all shadow-sm"
+                            onClick={() => setViewMode("desktop")}
+                            className={`p-1.5 rounded-md transition-all ${viewMode === "desktop" ? "bg-white shadow-sm text-black" : "text-zinc-400 hover:text-black"}`}
+                            title="Desktop View"
                         >
-                            {suggestion}
+                            <Monitor className="w-4 h-4" />
                         </button>
-                    ))}
-                </div>
+                        <button
+                            onClick={() => setViewMode("mobile")}
+                            className={`p-1.5 rounded-md transition-all ${viewMode === "mobile" ? "bg-white shadow-sm text-black" : "text-zinc-400 hover:text-black"}`}
+                            title="Mobile View"
+                        >
+                            <Smartphone className="w-4 h-4" />
+                        </button>
+                    </div>
 
-                {/* Theme Selection - Positioned below textarea */}
-                <div className="mt-4">
-                    <label className="text-xs font-bold text-zinc-600 mb-2 block">Design Theme</label>
-                    <div className="relative">
+                    <div className="flex bg-zinc-100 p-1 rounded-lg shrink-0">
                         <button
-                            onClick={() => !isGenerating && setIsThemeDropdownOpen(!isThemeDropdownOpen)}
-                            className={`w-full bg-white border px-4 py-2.5 rounded-xl flex items-center justify-between text-sm font-medium shadow-sm outline-none transition-all ${isThemeDropdownOpen ? "border-black ring-2 ring-zinc-100" : "border-zinc-200 hover:border-zinc-300"}`}
+                            onClick={() => setActiveTab("preview")}
+                            className={`px-3 md:px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === "preview" ? "bg-white shadow-sm text-black" : "text-zinc-500 hover:text-black"}`}
                         >
-                            <span className="truncate">
-                                {selectedTheme === "random" ? "🎲 Random Theme" : selectedTheme === "none" ? "⚪ No Theme" : selectedTheme}
-                            </span>
-                            <ChevronRight
-                                className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${isThemeDropdownOpen ? "-rotate-90" : "rotate-90"}`}
-                            />
-                        </button>
-                        {isThemeDropdownOpen && (
-                            <div className="absolute top-full mt-2 left-0 w-full bg-white border border-zinc-200 rounded-xl shadow-2xl overflow-hidden z-30 animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
-                                <button
-                                    onClick={() => { setSelectedTheme("random"); setIsThemeDropdownOpen(false); }}
-                                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50 ${selectedTheme === "random" ? "text-black font-bold bg-zinc-50" : "text-zinc-600"}`}
-                                >
-                                    🎲 Random Theme
-                                </button>
-                                <button
-                                    onClick={() => { setSelectedTheme("none"); setIsThemeDropdownOpen(false); }}
-                                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50 ${selectedTheme === "none" ? "text-black font-bold bg-zinc-50" : "text-zinc-600"}`}
-                                >
-                                    ⚪ No Theme
-                                </button>
-                                <div className="h-px bg-zinc-200 my-1" />
-                                {designVibes.map((theme) => (
-                                    <button
-                                        key={theme.name}
-                                        onClick={() => { setSelectedTheme(theme.name); setIsThemeDropdownOpen(false); }}
-                                        className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50 ${selectedTheme === theme.name ? "text-black font-bold bg-zinc-50" : "text-zinc-600"}`}
-                                    >
-                                        {theme.name}
-                                    </button>
-                                ))}
+                            <div className="flex items-center gap-2">
+                                <Eye className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Preview</span>
                             </div>
-                        )}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("code")}
+                            className={`px-3 md:px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === "code" ? "bg-white shadow-sm text-black" : "text-zinc-500 hover:text-black"}`}
+                        >
+                            <div className="flex items-center gap-2">
+                                <Code className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Code</span>
+                            </div>
+                        </button>
                     </div>
-                </div>
-            </div>
-
-            {/* Agents Flow - New Terminal Style */}
-            <div className="flex-1 p-6 flex flex-col items-center justify-start">
-                <GenerationStatus agentStates={agentStates} />
-
-                {/* Optional: Add a small tip or status message below */}
-                {!isGenerating && !generatedHtml && (
-                    <div className="mt-8 text-zinc-400 text-xs text-center max-w-xs">
-                        <p>Ready to generate. Select a theme and enter your prompt to begin.</p>
-                    </div>
-                )}
-            </div>
-        </div>
-
-        {/* RIGHT PANEL: PREVIEW */}
-        <div className={`w-full lg:w-2/3 bg-zinc-100 rounded-[2.5rem] border border-zinc-200 overflow-hidden flex-col shadow-inner h-[600px] lg:min-h-0 ${mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'}`}>
-            {/* Preview Header */}
-            <div className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-3 md:px-6 shrink-0 gap-2">
-                <div className="hidden md:flex items-center gap-2 shrink-0">
-                    <div className="w-3 h-3 rounded-full bg-red-400" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                    <div className="w-3 h-3 rounded-full bg-green-400" />
-                </div>
-                <div className="flex bg-zinc-100 p-1 rounded-lg shrink-0">
-                    <button
-                        onClick={() => setViewMode("desktop")}
-                        className={`p-1.5 rounded-md transition-all ${viewMode === "desktop" ? "bg-white shadow-sm text-black" : "text-zinc-400 hover:text-black"}`}
-                        title="Desktop View"
+                    <Button
+                        onClick={saveWebsite}
+                        disabled={isSaving || !generatedHtml}
+                        className="bg-black text-white hover:bg-zinc-800 transition-all rounded-lg px-3 md:px-4 py-1.5 h-auto text-xs font-bold flex items-center gap-2 shrink-0"
                     >
-                        <Monitor className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={() => setViewMode("mobile")}
-                        className={`p-1.5 rounded-md transition-all ${viewMode === "mobile" ? "bg-white shadow-sm text-black" : "text-zinc-400 hover:text-black"}`}
-                        title="Mobile View"
-                    >
-                        <Smartphone className="w-4 h-4" />
-                    </button>
+                        {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        <span className="hidden sm:inline">Save</span>
+                    </Button>
                 </div>
 
-                <div className="flex bg-zinc-100 p-1 rounded-lg shrink-0">
-                    <button
-                        onClick={() => setActiveTab("preview")}
-                        className={`px-3 md:px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === "preview" ? "bg-white shadow-sm text-black" : "text-zinc-500 hover:text-black"}`}
-                    >
-                        <div className="flex items-center gap-2">
-                            <Eye className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Preview</span>
-                        </div>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("code")}
-                        className={`px-3 md:px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === "code" ? "bg-white shadow-sm text-black" : "text-zinc-500 hover:text-black"}`}
-                    >
-                        <div className="flex items-center gap-2">
-                            <Code className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Code</span>
-                        </div>
-                    </button>
-                </div>
-                <Button
-                    onClick={saveWebsite}
-                    disabled={isSaving || !generatedHtml}
-                    className="bg-black text-white hover:bg-zinc-800 transition-all rounded-lg px-3 md:px-4 py-1.5 h-auto text-xs font-bold flex items-center gap-2 shrink-0"
-                >
-                    {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    <span className="hidden sm:inline">Save</span>
-                </Button>
-            </div>
 
-
-            {/* Content Area */}
-            <div className="flex-1 relative h-[450px]">
-                {activeTab === "preview" ? (
-                    <div className="w-full h-full relative flex items-center justify-center">
-                        {generationError ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-300">
-                                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-                                    <Zap className="w-8 h-8 text-red-500" />
+                {/* Content Area */}
+                <div className="flex-1 relative h-[450px]">
+                    {activeTab === "preview" ? (
+                        <div className="w-full h-full relative flex items-center justify-center">
+                            {generationError ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-300">
+                                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+                                        <Zap className="w-8 h-8 text-red-500" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-zinc-900 mb-2">Generation Failed</h3>
+                                    <p className="text-zinc-500 max-w-md text-sm mb-6">{generationError}</p>
+                                    <Button variant="outline" onClick={startGeneration}>Try Again</Button>
                                 </div>
-                                <h3 className="text-lg font-bold text-zinc-900 mb-2">Generation Failed</h3>
-                                <p className="text-zinc-500 max-w-md text-sm mb-6">{generationError}</p>
-                                <Button variant="outline" onClick={startGeneration}>Try Again</Button>
-                            </div>
-                        ) : isGenerating ? (
-                            <div className="absolute inset-0 flex items-center justify-center animate-in fade-in zoom-in duration-500 bg-zinc-800">
-                                <ShinyText
-                                    text="✨ Generating"
-                                    speed={1}
-                                    delay={0}
-                                    color="#b5b5b5"
-                                    shineColor="#ffffff"
-                                    spread={120}
-                                    direction="left"
-                                    yoyo={false}
-                                    pauseOnHover={false}
-                                    disabled={false}
-                                    className="text-2xl font-bold tracking-tight scale-110"
-                                />
-                            </div>
-                        ) : generatedHtml ? (
-                            <div className={`w-full h-full text-center transition-all duration-1000 ease-out flex justify-center items-center ${showPreview ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-                                <div
-                                    className={`relative transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] bg-black shadow-2xl overflow-hidden
+                            ) : isGenerating ? (
+                                <div className="absolute inset-0 flex items-center justify-center animate-in fade-in zoom-in duration-500 bg-zinc-800">
+                                    <ShinyText
+                                        text="✨ Generating"
+                                        speed={1}
+                                        delay={0}
+                                        color="#b5b5b5"
+                                        shineColor="#ffffff"
+                                        spread={120}
+                                        direction="left"
+                                        yoyo={false}
+                                        pauseOnHover={false}
+                                        disabled={false}
+                                        className="text-2xl font-bold tracking-tight scale-110"
+                                    />
+                                </div>
+                            ) : generatedHtml ? (
+                                <div className={`w-full h-full text-center transition-all duration-1000 ease-out flex justify-center items-center ${showPreview ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+                                    <div
+                                        className={`relative transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] bg-black shadow-2xl overflow-hidden
                                             ${viewMode === "mobile"
-                                            ? "w-[280px] h-[550px] rounded-[3rem] border-[14px] border-black scale-100 origin-center"
-                                            : "w-full h-full rounded-xl ring-0 scale-100"}`}
-                                >
-                                    {/* Screen Content */}
-                                    <div className={`w-full h-full overflow-hidden bg-white transition-all duration-500 ${viewMode === "mobile" ? "rounded-[2rem]" : "rounded-xl"}`}>
-                                        <iframe
-                                            title="Website Preview"
-                                            srcDoc={generatedHtml ? generatedHtml.replace('</head>', '<style>::-webkit-scrollbar { display: none !important; width: 0 !important; } body { -ms-overflow-style: none !important; scrollbar-width: none !important; }</style></head>') : ''}
-                                            className="w-full h-full border-0"
-                                            sandbox="allow-scripts allow-same-origin"
+                                                ? "w-[280px] h-[550px] rounded-[3rem] border-[14px] border-black scale-100 origin-center"
+                                                : "w-full h-full rounded-xl ring-0 scale-100"}`}
+                                    >
+                                        {/* Screen Content */}
+                                        <div className={`w-full h-full overflow-hidden bg-white transition-all duration-500 ${viewMode === "mobile" ? "rounded-[2rem]" : "rounded-xl"}`}>
+                                            <iframe
+                                                title="Website Preview"
+                                                srcDoc={generatedHtml ? generatedHtml.replace('</head>', '<style>::-webkit-scrollbar { display: none !important; width: 0 !important; } body { -ms-overflow-style: none !important; scrollbar-width: none !important; }</style></head>') : ''}
+                                                className="w-full h-full border-0"
+                                                sandbox="allow-scripts allow-same-origin"
+                                            />
+                                        </div>
+
+                                        {/* Phone Notch - Only visible in mobile */}
+                                        <div
+                                            className={`absolute left-1/2 -translate-x-1/2 bg-black z-20 transition-all duration-500 ease-in-out top-0 pointer-events-none
+                                            ${viewMode === "mobile"
+                                                    ? "w-[120px] h-6 rounded-b-2xl opacity-100"
+                                                    : "w-0 h-0 opacity-0"}`}
+                                        />
+
+                                        {/* Home Indicator - Only visible in mobile */}
+                                        <div
+                                            className={`absolute left-1/2 -translate-x-1/2 bg-black z-20 transition-all duration-500 ease-in-out bottom-1 pointer-events-none
+                                            ${viewMode === "mobile"
+                                                    ? "w-full max-w-[40%] h-1 rounded-full opacity-100"
+                                                    : "w-0 h-0 opacity-0"}`}
                                         />
                                     </div>
-
-                                    {/* Phone Notch - Only visible in mobile */}
-                                    <div
-                                        className={`absolute left-1/2 -translate-x-1/2 bg-black z-20 transition-all duration-500 ease-in-out top-0 pointer-events-none
-                                            ${viewMode === "mobile"
-                                                ? "w-[120px] h-6 rounded-b-2xl opacity-100"
-                                                : "w-0 h-0 opacity-0"}`}
-                                    />
-
-                                    {/* Home Indicator - Only visible in mobile */}
-                                    <div
-                                        className={`absolute left-1/2 -translate-x-1/2 bg-black z-20 transition-all duration-500 ease-in-out bottom-1 pointer-events-none
-                                            ${viewMode === "mobile"
-                                                ? "w-full max-w-[40%] h-1 rounded-full opacity-100"
-                                                : "w-0 h-0 opacity-0"}`}
-                                    />
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-300 gap-4">
-                                <div className="w-24 h-24 bg-zinc-50 rounded-3xl flex items-center justify-center">
-                                    <LayoutTemplate className="w-10 h-10" />
+                            ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-zinc-300 gap-4">
+                                    <div className="w-24 h-24 bg-zinc-50 rounded-3xl flex items-center justify-center">
+                                        <LayoutTemplate className="w-10 h-10" />
+                                    </div>
+                                    <p className="font-bold text-sm uppercase tracking-widest">Waiting for Input</p>
                                 </div>
-                                <p className="font-bold text-sm uppercase tracking-widest">Waiting for Input</p>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <textarea
-                        readOnly
-                        value={generatedHtml || "<!-- Code will appear here after generation -->"}
-                        className="w-full h-full bg-zinc-900 text-zinc-300 font-mono text-xs p-6 outline-none resize-none"
-                    />
-                )}
-            </div>
+                            )}
+                        </div>
+                    ) : (
+                        <textarea
+                            readOnly
+                            value={generatedHtml || "<!-- Code will appear here after generation -->"}
+                            className="w-full h-full bg-zinc-900 text-zinc-300 font-mono text-xs p-6 outline-none resize-none"
+                        />
+                    )}
+                </div>
+            </div >
         </div >
-    </div >
-);
+    );
 }

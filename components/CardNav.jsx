@@ -7,7 +7,7 @@ import './CardNav.css';
 import { useAuth } from '@/context/AuthContext';
 
 const CardNav = ({
-  logo,
+  logo = null,
   logoAlt = 'Logo',
   items,
   className = '',
@@ -143,7 +143,7 @@ const CardNav = ({
       <nav ref={navRef} className={`card-nav ${isExpanded ? 'open' : ''}`} style={{ backgroundColor: baseColor }}>
         <div className="card-nav-top">
           <div className="logo-container flex items-center gap-2" >
-            <img src={logo} alt={logoAlt} className="logo" />
+            {logo && <img src={logo} alt={logoAlt} className="logo" />}
             <span className="logo-text text-2xl font-bold" style={{ color: menuColor || '#000' }}>Neura CDN</span>
           </div>
 

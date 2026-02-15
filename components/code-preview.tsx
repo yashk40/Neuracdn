@@ -4,14 +4,15 @@ import { useState, useEffect } from "react"
 
 const codeSteps = [
   {
-    title: "Generate via API",
-    code: `curl -X POST https://api.neura-cdn.com/v1/generate \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "prompt": "Modern glow button",
-    "style": "glassmorphism",
-    "theme": "dark"
-  }'`,
+    title: "Import Component",
+    code: `import BasicForm from "./UI/Basic-form";
+export default function Home() {
+  return (
+    <>
+      <BasicForm/>
+    </>  
+   );
+  }`,
   },
   {
     title: "Instant Live Build",
@@ -26,7 +27,7 @@ const codeSteps = [
   {
     title: "Drop into Project",
     code: `<!-- 1. Include the CDN link -->
-<link rel="stylesheet" href="https://cdn.neura.io/assets/8f92a.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neuracdn/CDN@main/animation-1771189205835-u753ye.css">
 
 <!-- 2. Use the markup -->
 <button class="neura-btn-glow">

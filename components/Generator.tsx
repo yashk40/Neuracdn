@@ -370,40 +370,31 @@ export default function HomePage() {
 
     // Check if backup mode is active
     if (isBackupMode) {
-      setLoadingMessage("Fetching backup component...");
+      setLoadingMessage("Generating...");
       try {
-        const res = await fetch(`/api/neura/component?prompt=${encodeURIComponent(aiPrompt)}`);
-        if (!res.ok) throw new Error("Backup fetch failed");
+        const res = await fetch(`/api/neura/component`);
+        if (!res.ok) throw new Error("Fetch failed");
 
-        const backupData = await res.json();
+        const data = await res.json();
+        let code = "";
+        if (data.html || data.css) {
+          code = `<!DOCTYPE html><html><head><style>${data.css || ""}</style></head><body>${data.html || ""}</body></html>`;
+        } else {
+          code = data.response || data.code || (typeof data === 'string' ? data : "");
+        }
 
-        // Simulate realistic styling/polishing timing
-        setTimeout(() => setLoadingMessage("Styling component..."), 1500);
-        setTimeout(() => setLoadingMessage("Polishing code..."), 3000);
+        // 2-second delay before showing the result
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
-        await new Promise(resolve => setTimeout(resolve, 4500));
-
-        const fullCode = `<!DOCTYPE html>
-<html>
-<head>
-<style>
-${backupData.css || ""}
-</style>
-</head>
-<body>
-${backupData.html || ""}
-</body>
-</html>`;
-
-        processCode(fullCode);
-        toast.success(`Fetched from Cloud Cache!`);
+        processCode(code);
+        toast.success(`Generated successfully`);
         setIsBackupMode(false);
         setIsGenerating(false);
         setLoadingMessage("");
         return; // Success, stop here
       } catch (err) {
         console.error("Backup fetch error:", err);
-        toast.error("Cloud Cache miss. Using AI Model instead...");
+        toast.error(" Using different AI Model instead...");
         setIsBackupMode(false);
         // Fall through to normal generation flow
       }

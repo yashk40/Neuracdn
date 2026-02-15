@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Sparkles } from "lucide-react"
+import Beams from './Beams';
 import Link from "next/link"
 // @ts-ignore
 import Silk from "./Silk"
@@ -9,13 +10,22 @@ export function Hero() {
     <section className="relative min-h-screen flex flex-col justify-center pt-24 pb-20 lg:pt-32 lg:pb-32 overflow-hidden">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="relative w-full h-full">
-          <Silk
+          <Beams
+            beamWidth={3}
+            beamHeight={30}
+            beamNumber={20}
+            lightColor="#ffffff"
+            speed={2}
+            noiseIntensity={1.75}
+            scale={0.2}
+            rotation={30}
+          /> {/* <Silk
             speed={5}
             scale={1}
-            color="#3a3a3aff"
+            color=""
             noiseIntensity={1.5}
             rotation={0}
-          />
+          /> */}
         </div>
       </div>
       {/* Grid background */}
