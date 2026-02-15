@@ -75,82 +75,8 @@ const suggestions = [
 ];
 
 // Pre-defined backup responses for suggestions
-const backupResponses: Record<string, { html: string; css: string }> = {
-  "Create a contact form with validation": {
-    html: `<div class="contact-form">
-        <h2>Contact Us</h2>
-        <input type="text" placeholder="Full Name" required="">
-        <input type="email" placeholder="Email" required="">
-        <input type="tel" placeholder="Phone Number (optional)">
-        <textarea rows="4" placeholder="Message" required=""></textarea>
-        <button type="submit">Submit</button>
-    </div>`,
-    css: `body {
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Inter', sans-serif;
-        }
+// Backup responses are now fetched dynamically via /api/neura/component
 
-        .contact-form {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            width: 90%;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .contact-form h2 {
-            margin: 0;
-            font-weight: 600;
-            text-align: center;
-        }
-
-        .contact-form input, 
-        .contact-form textarea {
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 0.5rem;
-            font-size: 1rem;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-
-        .contact-form input:focus, 
-        .contact-form textarea:focus {
-            border-color: #6a11cb;
-            box-shadow: 0 0 5px rgba(106, 17, 203, 0.5);
-            outline: none;
-        }
-
-        .contact-form button {
-            background: #6a11cb;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 0.7rem;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.3s;
-        }
-
-        .contact-form button:hover {
-            background: #2575fc;
-            transform: translateY(-2px);
-        }
-
-        @media (max-width: 600px) {
-            .contact-form {
-                padding: 1.5rem;
-            }
-        }`
-  }
-};
 
 
 
@@ -162,7 +88,7 @@ export default function HomePage() {
   const [cssCode, setCssCode] = useState("");
   const [scriptCode, setScriptCode] = useState("");
   const [framework, setFramework] = useState<"css" | "tailwind" | "bootstrap">("css");
-  const [selectedModel, setSelectedModel] = useState<"llama-3.3-70b-versatile" | "gpt-4o-mini">("gpt-4o-mini");
+  const [selectedModel, setSelectedModel] = useState<"llama-3.3-70b-versatile" | "gpt-4o-mini" | "nvidia/step-3.5-flash">("gpt-4o-mini");
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
@@ -248,6 +174,8 @@ export default function HomePage() {
       setShowWarning(false); setPendingFramework(null);
     }
   };
+
+
 
   const handleFrameworkChange = (newFramework: "css" | "tailwind" | "bootstrap") => {
     if (newFramework === framework) return;
@@ -441,40 +369,44 @@ export default function HomePage() {
     let finalPrompt = aiPrompt;
 
     // Check if backup mode is active
-    if (isBackupMode && backupResponses[aiPrompt]) {
-      // Simulate realistic API timing
-      setTimeout(() => setLoadingMessage("Generating logic..."), 1500);
-      setTimeout(() => setLoadingMessage("Styling component..."), 3000);
-      setTimeout(() => setLoadingMessage("Polishing code..."), 4500);
-
+    if (isBackupMode) {
+      setLoadingMessage("Fetching backup component...");
       try {
-        // Wait for realistic generation time (5-6 seconds total)
-        await new Promise(resolve => setTimeout(resolve, 5800));
+        const res = await fetch(`/api/neura/component?prompt=${encodeURIComponent(aiPrompt)}`);
+        if (!res.ok) throw new Error("Backup fetch failed");
 
-        // Return pre-defined backup code
-        const backupCode = backupResponses[aiPrompt];
+        const backupData = await res.json();
+
+        // Simulate realistic styling/polishing timing
+        setTimeout(() => setLoadingMessage("Styling component..."), 1500);
+        setTimeout(() => setLoadingMessage("Polishing code..."), 3000);
+
+        await new Promise(resolve => setTimeout(resolve, 4500));
+
         const fullCode = `<!DOCTYPE html>
 <html>
 <head>
 <style>
-${backupCode.css}
+${backupData.css || ""}
 </style>
 </head>
 <body>
-${backupCode.html}
+${backupData.html || ""}
 </body>
 </html>`;
 
         processCode(fullCode);
-        toast.success(`Generated successfully!`);
-        setIsBackupMode(false); // Reset backup mode
-      } catch (err) {
-        toast.error("Generation failed. Please try again.");
-      } finally {
+        toast.success(`Fetched from Cloud Cache!`);
+        setIsBackupMode(false);
         setIsGenerating(false);
         setLoadingMessage("");
+        return; // Success, stop here
+      } catch (err) {
+        console.error("Backup fetch error:", err);
+        toast.error("Cloud Cache miss. Using AI Model instead...");
+        setIsBackupMode(false);
+        // Fall through to normal generation flow
       }
-      return;
     }
 
     // Normal generation flow
@@ -608,7 +540,7 @@ ${backupCode.html}
     setIsUploading(true);
     try {
       // DEBUGGING: Check what the package name actually is
-      alert(`Debug: Package Name is "${packageName}"`);
+      // alert(`Debug: Package Name is "${packageName}"`);
 
       if (deployMode === "npm" && !packageName.trim()) {
         toast.error("Please enter a package name (Debug: Name is empty)");
@@ -683,6 +615,23 @@ ${backupCode.html}
     } catch (error) {
       console.error("Error deleting website:", error);
       toast.error("Failed to delete website");
+    }
+  };
+
+  const deleteComponent = async (componentId: string) => {
+    if (!user) return;
+
+    if (!confirm("Are you sure you want to delete this component? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, "users_database", componentId));
+      toast.success("Component deleted successfully!");
+      fetchHistory(); // Refresh the list
+    } catch (error) {
+      console.error("Error deleting component:", error);
+      toast.error("Failed to delete component");
     }
   };
 
@@ -813,33 +762,10 @@ ${backupCode.html}
         </div>
       </aside>
 
-      {/* ─── MOBILE BOTTOM NAV ─── */}
-      <nav className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 h-16 px-3 nav-pill rounded-full flex items-center gap-2 z-50">
-        {[
-          { id: "generator", icon: Zap },
-          { id: "showcase", icon: LayoutGrid },
-          { id: "website-beta", icon: Bot },
-        ].map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setCurrentView(item.id as any)}
-            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${currentView === item.id ? "bg-black text-white shadow-lg" : "text-zinc-400"
-              }`}
-          >
-            <item.icon style={{ width: '18px', height: '18px' }} />
-          </button>
-        ))}
-        <div className="w-px h-8 bg-zinc-200 mx-1" />
-        <button
-          onClick={async () => { await logout(); router.push("/auth"); }}
-          className="w-11 h-11 rounded-full text-zinc-400 hover:text-red-400 flex items-center justify-center"
-        >
-          <LogOut style={{ width: '16px', height: '16px' }} />
-        </button>
-      </nav>
+
 
       {/* ─── MAIN CONTENT ─── */}
-      <main className="flex-1 flex flex-col min-h-screen md:pl-24">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden md:pl-24 bg-[#f4f3f0]">
 
         {/* TOP HEADER */}
         <header className="h-20 flex items-center px-5 md:px-8 shrink-0 z-40 sticky top-0 bg-[#f4f3f0]/90 backdrop-blur-sm">
@@ -864,19 +790,20 @@ ${backupCode.html}
             </div>
 
             {/* Status */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push('/library/components')}
-                className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded-full text-[10px] font-bold hover:bg-zinc-800 transition-colors shadow-sm"
+                className="flex items-center justify-center w-9 h-9 md:w-auto md:h-auto md:px-3 md:py-1.5 bg-black text-white rounded-full text-[10px] font-bold hover:bg-zinc-800 transition-colors shadow-sm"
+                title="Open Source Components"
               >
                 <LayoutGrid style={{ width: '12px', height: '12px' }} />
-                Open Source Components
+                <span className="hidden sm:inline ml-2">Components</span>
               </button>
-              <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
+              <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-100 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
                 <span className="text-[10px] font-bold text-green-600 tracking-wide hidden sm:block">LIVE</span>
               </div>
-              <div className="text-[10px] font-semibold text-zinc-400 bg-white/60 px-3 py-1.5 rounded-full border border-zinc-100 hidden md:block">
+              <div className="text-[10px] font-semibold text-zinc-400 bg-white/60 px-3 py-1.5 rounded-full border border-zinc-100 hidden lg:block">
                 {history.length} components
               </div>
             </div>
@@ -884,7 +811,7 @@ ${backupCode.html}
         </header>
 
         {/* SCROLL AREA */}
-        <div className="flex-1 px-5 md:px-8 pb-28 md:pb-10 space-y-5">
+        <div className="flex-1 px-5 md:px-8 pb-28 md:pb-10 pt-6 space-y-5 overflow-y-auto overflow-x-hidden scroll-smooth w-full mx-auto">
 
           {/* ── WEBSITE BETA VIEW ── */}
           {currentView === "website-beta" && (
@@ -942,7 +869,7 @@ ${backupCode.html}
                 </div>
 
                 {/* Controls Row */}
-                <div className="flex flex-col xl:flex-row gap-3 items-stretch xl:items-center">
+                <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
                   {/* Model Select */}
                   {/* Model Select Custom Dropdown */}
                   <div className="relative xl:w-52">
@@ -952,7 +879,7 @@ ${backupCode.html}
                     >
                       <Bot className="absolute left-3.5 text-zinc-400 pointer-events-none" style={{ width: '14px', height: '14px' }} />
                       <span className="truncate">
-                        {selectedModel === "gpt-4o-mini" ? "GPT-4o-mini" : "Llama 3.3 (Groq)"}
+                        {selectedModel === "gpt-4o-mini" ? "GPT-4o-mini" : selectedModel === "llama-3.3-70b-versatile" ? "Llama 3.3" : selectedModel === "nvidia/step-3.5-flash" ? "Step 3.5 Flash" : "Select Model"}
                       </span>
                       <ChevronRight
                         className={`absolute right-3 text-zinc-300 pointer-events-none transition-transform duration-200 ${isModelDropdownOpen ? "-rotate-90" : "rotate-90"}`}
@@ -966,7 +893,8 @@ ${backupCode.html}
                         <div className="p-1">
                           {[
                             { id: "gpt-4o-mini", label: "GPT-4o-mini", desc: "Fast & Smart" },
-                            { id: "llama-3.3-70b-versatile", label: "Llama 3.3", desc: "Open Source" }
+                            { id: "llama-3.3-70b-versatile", label: "Llama 3.3", desc: "Open Source" },
+                            { id: "nvidia/step-3.5-flash", label: "Step 3.5 Flash", desc: "Fast & Smart" }
                           ].map((model) => (
                             <button
                               key={model.id}
@@ -1023,10 +951,7 @@ ${backupCode.html}
                       key={i}
                       onClick={() => {
                         setAiPrompt(s);
-                        // Activate backup mode if this suggestion has a pre-defined response
-                        if (backupResponses[s]) {
-                          setIsBackupMode(true);
-                        }
+                        setIsBackupMode(true);
                       }}
                       className="text-[11px] text-zinc-500 bg-white border border-zinc-100 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-zinc-900 hover:text-white hover:border-transparent transition-all duration-200 shadow-sm font-medium"
                     >
@@ -1037,7 +962,7 @@ ${backupCode.html}
               </div>
 
               {/* ─── VISUALIZER / LIVE EDIT ─── */}
-              <div className="glass-card rounded-[28px] overflow-hidden" style={{ minHeight: '560px' }}>
+              <div className="glass-card rounded-[28px] overflow-hidden min-h-[400px] md:min-h-[560px]">
                 {/* Toolbar */}
                 <div className="h-14 border-b border-zinc-100/80 flex items-center justify-between px-5 bg-white/50">
                   {/* Left: Mode tabs */}
@@ -1049,7 +974,7 @@ ${backupCode.html}
                         : "text-zinc-400 hover:text-zinc-600"
                         }`}
                     >
-                      <Eye style={{ width: '12px', height: '12px' }} /> Preview
+                      <Eye style={{ width: '16px', height: '16px' }} /> <span className="hidden sm:inline">Preview</span>
                     </button>
                     <button
                       onClick={() => { setActiveTab("code"); setIsEditMode(false); }}
@@ -1058,7 +983,7 @@ ${backupCode.html}
                         : "text-zinc-400 hover:text-zinc-600"
                         }`}
                     >
-                      <Code style={{ width: '12px', height: '12px' }} /> Code
+                      <Code style={{ width: '16px', height: '16px' }} /> <span className="hidden sm:inline">Code</span>
                     </button>
                     <button
                       onClick={() => { setIsEditMode(!isEditMode); if (!isEditMode) setActiveTab("preview"); }}
@@ -1067,7 +992,7 @@ ${backupCode.html}
                         : "text-zinc-400 hover:text-zinc-600"
                         }`}
                     >
-                      <Columns style={{ width: '12px', height: '12px' }} /> Live Edit
+                      <Columns style={{ width: '16px', height: '16px' }} /> <span className="hidden sm:inline">Live Edit</span>
                     </button>
                     {/* <button
                       onClick={() => {
@@ -1127,7 +1052,7 @@ ${backupCode.html}
                 </div>
 
                 {/* ─── CONTENT AREA ─── */}
-                <div className="flex" style={{ height: '500px' }}>
+                <div className="flex h-[400px] md:h-[500px]">
 
                   {/* LIVE EDIT MODE: Side-by-side editor + preview */}
                   {isEditMode ? (
@@ -1533,7 +1458,7 @@ ${backupCode.html}
                               ? `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Generated Component</title>\n  <link rel="stylesheet" href="${uploadResult.cdnUrl}">\n</head>\n<body>\n${htmlCode}\n</body>\n</html>`
                               : `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Generated Component</title>\n${cssCode ? `  <style>\n${cssCode}\n  </style>\n` : ''}</head>\n<body>\n${htmlCode}\n</body>\n</html>`
                       }
-                      className="w-full h-[300px] bg-zinc-50 border border-zinc-100 rounded-[16px] p-4 mono text-[10px] text-zinc-500 resize-none outline-none focus:bg-white transition-colors"
+                      className="w-full h-[200px] md:h-[300px] bg-zinc-50 border border-zinc-100 rounded-[16px] p-4 mono text-[10px] text-zinc-500 resize-none outline-none focus:bg-white transition-colors"
                       placeholder="Generated markup will appear here..."
                     />
                   </div>
@@ -1547,9 +1472,10 @@ ${backupCode.html}
             <div className="max-w-7xl mx-auto w-full slide-up">
               <div className="glass-card rounded-[28px] p-6 md:p-10" style={{ minHeight: '80vh' }}>
                 {/* Component Library Header */}
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-lg shadow-zinc-500/20">
+                {/* Component Library Header */}
+                <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-6 md:gap-0">
+                  <div className="flex items-center gap-4 w-full md:w-auto">
+                    <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-lg shadow-zinc-500/20 shrink-0">
                       <LayoutGrid style={{ width: '20px', height: '20px', color: 'white' }} />
                     </div>
                     <div>
@@ -1570,7 +1496,7 @@ ${backupCode.html}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
                     <span className="tag-pill bg-zinc-100 text-zinc-500 px-3 py-2 rounded-full border border-zinc-200">
                       {activeLibraryTab === "components" ? history.length : websiteHistory.length} items
                     </span>
@@ -1620,6 +1546,16 @@ ${backupCode.html}
                                 {item.createdAt instanceof Timestamp ? item.createdAt.toDate().toLocaleDateString() : 'Recent'}
                               </span>
                               <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteComponent(item.id);
+                                  }}
+                                  className="p-1.5 rounded-full bg-zinc-100 hover:bg-red-50 transition-all duration-200 group/delete"
+                                  title="Delete component"
+                                >
+                                  <Trash2 className="w-3 h-3 text-zinc-400 group-hover/delete:text-red-500 transition-colors" />
+                                </button>
                                 <button
                                   onClick={(e) => toggleVisibility(e, item)}
                                   className={`p-1.5 rounded-full transition-all duration-200 ${item.isPublic
@@ -2019,6 +1955,33 @@ ${backupCode.html}
           </div>
         </div>
       )}
+
+      {/* ─── MOBILE BOTTOM NAV ─── */}
+      <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-[#18181b] p-1.5 rounded-full shadow-2xl shadow-black/20 border border-zinc-700/50 backdrop-blur-md">
+        {[
+          { id: "generator", icon: Brain, label: "Create" },
+          { id: "showcase", icon: LayoutGrid, label: "Library" },
+          { id: "website-beta", icon: Monitor, label: "Site" }
+        ].map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setCurrentView(item.id as any)}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${currentView === item.id
+              ? "bg-zinc-800 text-white"
+              : "text-zinc-500 hover:text-zinc-300"
+              }`}
+          >
+            <item.icon style={{ width: '20px', height: '20px' }} />
+          </button>
+        ))}
+        <div className="w-px h-6 bg-zinc-800 mx-1" />
+        <button
+          onClick={async () => { await logout(); router.push("/auth"); }}
+          className="w-12 h-12 rounded-full text-zinc-500 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-colors"
+        >
+          <LogOut style={{ width: '18px', height: '18px' }} />
+        </button>
+      </div>
     </div>
   );
 }

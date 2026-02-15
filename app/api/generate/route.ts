@@ -62,16 +62,19 @@ Your goal is to generate a premium, production-ready UI component using **Bootst
 
 ### CRITICAL INSTRUCTION:
 **OUTPUT ONLY THE RAW CODE.** 
+- **DO NOT** use markdown code blocks.
 - Your response MUST start with \`<!DOCTYPE html>\` and end with \`</html>\`.
 
 ### Design Guidelines:
-- **Animations**: Use standard Bootstrap transitions or simple CSS where needed.
-- **NO BODY STYLING**: **CRITICAL**: Do NOT apply styles to the \`<body>\` tag. Use a \`.container-fluid\` or wrapper div for backgrounds and global typography.
+- **BOOTSTRAP FIRST**: Use Bootstrap 5 utility classes (e.g., \`mt-5\`, \`p-4\`, \`d-flex\`, \`justify-content-center\`, \`text-primary\`) for layout and styling.
+- **MINIMIZE CUSTOM CSS**: Only include custom CSS in a \`<style>\` tag if the desired effect (like complex animations) cannot be achieved with Bootstrap classes.
+- **Animations**: Use standard Bootstrap transitions or simple CSS/AOS where needed.
+- **NO BODY STYLING**: **CRITICAL**: Do NOT apply styles to the \`<body>\` tag. Use a \`.container\` or \`.container-fluid\` wrapper.
 - **WHITE BACKGROUND CONTEXT**: Assume the component will be placed on a **WHITE background**. Ensure all text, icons, and elements have sufficient contrast against white (#ffffff).
 
 ### Technical Constraints:
-1. **CDNs**: Include Bootstrap 5, AOS (CSS/JS), Vanta, Three.js, and Lenis.
-2. **Initialization**: AOS and Lenis must be initialized.
+1. **CDNs**: Include Bootstrap 5 (\`https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css\`), plus AOS, Vanta, Three.js, and Lenis if needed.
+2. **Setup**: Initialize AOS (\`AOS.init()\`) and Lenis in a script tag at the bottom.
 `
 };
 
@@ -119,6 +122,71 @@ export async function POST(request: NextRequest) {
                 max_tokens: 4000,
             });
             generatedCode = completion.choices[0]?.message?.content || "";
+        } else if (model === "openrouter/aurora-alpha") {
+            // OpenRouter (Aurora Alpha with Reasoning)
+            try {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${process.env.OPEN_ROUTER}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: "openrouter/aurora-alpha",
+                        messages: [
+                            {
+                                role: "system",
+                                content: systemPrompt
+                            },
+                            {
+                                role: "user",
+                                content: prompt
+                            }
+                        ],
+                        reasoning: { enabled: true }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`OpenRouter API Error: ${response.statusText} - ${errorText}`);
+                }
+
+                const data = await response.json();
+                generatedCode = data.choices?.[0]?.message?.content || "";
+
+            } catch (err: any) {
+                console.error("OpenRouter Error:", err);
+                throw new Error(err.message || "Failed to generate with Aurora Alpha");
+            }
+        } else if (model === "nvidia/glm-5") {
+            // NVIDIA GLM-5
+            try {
+                const nvidia = new OpenAI({
+                    apiKey: process.env.NVIDIA_API_KEY,
+                    baseURL: 'https://integrate.api.nvidia.com/v1',
+                });
+
+                const completion = await nvidia.chat.completions.create({
+                    model: "openai/gpt-oss-120b",
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: prompt } // Using prompt directly as content based on standard OpenAI usage, user snippet had empty content but we need to pass the prompt
+                    ],
+                    temperature: 0.5,
+                    top_p: 1,
+                    max_tokens: 1024,
+                    extra_body: {
+                        chat_template_kwargs: { "enable_thinking": true, "clear_thinking": false }
+                    },
+                    stream: false
+                } as any);
+
+                generatedCode = completion.choices[0]?.message?.content || "";
+            } catch (err: any) {
+                console.error("NVIDIA API Error:", err);
+                throw new Error(err.message || "Failed to generate with GLM-5");
+            }
         } else {
             // Default to Groq (Llama)
             const chatCompletion = await groq.chat.completions.create({

@@ -43,7 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${poppins.variable} font-sans antialiased`}>
+      <body className={`${poppins.variable} font-sans antialiased overflow-x-hidden`}>
         {/* <SmoothScroll /> */}
         <AuthProvider>
           {children}
