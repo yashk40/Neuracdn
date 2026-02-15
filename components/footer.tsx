@@ -10,7 +10,7 @@ export function Footer() {
             <span className="font-semibold">Neura CDN</span>
           </div>
           <span className="text-muted-foreground hidden md:inline">•</span>
-          <p className="text-muted-foreground">© 2025 All rights reserved.</p>
+          <p className="text-muted-foreground">© 2026 All rights reserved.</p>
         </div>
 
         <div className="flex items-center gap-6 text-muted-foreground">

@@ -10,6 +10,7 @@ import { Features } from "@/components/features"
 import { CodePreview } from "@/components/code-preview"
 import { CTA } from "@/components/cta"
 import { Footer } from "@/components/footer"
+
 import { Loader2 } from "lucide-react";
 
 export default function Home() {
