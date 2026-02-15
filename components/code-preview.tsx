@@ -43,7 +43,9 @@ export default function Home() {
     icon: Rocket,
     fileName: "index.html",
     code: `<!-- 1. Include the CDN link -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neuracdn/CDN@main/animation-1771189205835-u753ye.css">
+<link rel="stylesheet" 
+href=
+"cdn.jsdelivr.net/gh/neuracdn/CDN@main/animation-1771189205835-u753ye.css">
 
 <!-- 2. Use the markup -->
 <button class="neura-btn-glow">
