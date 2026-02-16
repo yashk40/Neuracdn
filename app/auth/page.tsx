@@ -251,7 +251,7 @@ export default function AuthPage() {
                                 Google
                             </button>
 
-                            <button
+                            {/* <button
                                 className="w-full bg-[#24292F] hover:bg-[#2F363D] text-white h-11 font-medium text-sm transition-all border border-transparent rounded-md flex items-center justify-center gap-2"
                                 onClick={handleGithubSignIn}
                                 disabled={loading}
@@ -262,7 +262,7 @@ export default function AuthPage() {
                                     <Github className="h-4 w-4" />
                                 )}
                                 GitHub
-                            </button>
+                            </button> */}
                         </div>
 
                         <div className="text-center pt-4">
