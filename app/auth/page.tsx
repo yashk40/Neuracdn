@@ -220,7 +220,7 @@ export default function AuthPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="gap-3">
                             <button
                                 className="w-full bg-white hover:bg-zinc-50 text-black h-11 font-medium text-sm transition-all border border-zinc-200 rounded-md flex items-center justify-center gap-2"
                                 onClick={handleGoogleSignIn}
