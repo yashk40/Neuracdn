@@ -883,7 +883,7 @@ export default function HomePage() {
                       <div className="absolute top-full mt-2 left-0 w-full bg-white border border-zinc-100 rounded-[14px] shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
                         <div className="p-1">
                           {[
-                            { id: "gpt-4o-mini", label: "GPT-4o-mini", desc: "Fast & Smart" },
+                          
                             { id: "llama-3.3-70b-versatile", label: "Llama 3.3", desc: "Open Source" },
                             { id: "nvidia/step-3.5-flash", label: "Step 3.5 Flash", desc: "Fast & Smart" }
                           ].map((model) => (
