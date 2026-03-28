@@ -175,7 +175,7 @@ export default function WebsiteBuilder() {
     const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
     const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
     const [selectedFramework, setSelectedFramework] = useState<"css" | "tailwind" | "bootstrap">("css"); // Default Raw CSS
-    const [selectedModel, setSelectedModel] = useState<"llama-3.3-70b-versatile" | "gpt-4o-mini" | "local-model" | "neura-ai">("neura-ai");
+    const [selectedModel, setSelectedModel] = useState<"llama-3.3-70b-versatile" | "local-model" | "neura-ai">("neura-ai");
     const [showPreview, setShowPreview] = useState(false);
     const [mobileTab, setMobileTab] = useState<"builder" | "preview">("builder"); // New Mobile Tab State
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -267,7 +267,7 @@ export default function WebsiteBuilder() {
         }
     };
 
-    const generateComponent = async (section: string, sectionPrompt: string, vibe: typeof designVibes[0], image?: string | null) => {
+    const generateComponent = async (section: string, sectionPrompt: string, vibe: typeof designVibes[0]) => {
         try {
             const res = await fetch("/api/generate", {
                 method: "POST",
@@ -282,7 +282,6 @@ Context: The user wants a website described as: "${prompt}".
                 Use ${selectedFramework === 'css' ? 'Vanilla CSS' : selectedFramework === 'tailwind' ? 'Tailwind CSS' : 'Bootstrap 5'}.`,
                     framework: selectedFramework,
                     model: selectedModel,
-                    image: image // Pass image if available
                 }),
             });
             if (!res.ok) throw new Error(`Failed to generate ${section} `);
@@ -330,37 +329,18 @@ Context: The user wants a website described as: "${prompt}".
 
         // Image Handling
         let visionPrompt = "";
-        let directImageBase64: string | null = null;
-
         if (selectedImage) {
-            if (selectedModel === "gpt-4o-mini") {
-                // For GPT-4o-mini, use Direct Image support (skip vision API)
-                try {
-                    const reader = new FileReader();
-                    directImageBase64 = await new Promise((resolve, reject) => {
-                        reader.onload = () => resolve(reader.result as string);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(selectedImage);
-                    });
-                    toast.info("Image attached for direct analysis by GPT-4o-mini");
-                } catch (e) {
-                    console.error("Failed to convert image", e);
-                    toast.error("Failed to process image");
-                }
-            } else {
-                // For other models, use Vision API to get a text description
-                toast.info("Analyzing image...");
-                try {
-                    const visionFormData = new FormData();
-                    visionFormData.append("image", selectedImage);
-                    const visionRes = await fetch("/api/vision", { method: "POST", body: visionFormData });
-                    if (!visionRes.ok) throw new Error("Vision analysis failed");
-                    const visionData = await visionRes.json();
-                    visionPrompt = `(Context from image: ${visionData.prompt}) `;
-                    toast.success("Image analyzed!");
-                } catch (err) {
-                    toast.error("Image analysis failed. Using text prompt only.");
-                }
+            toast.info("Analyzing image...");
+            try {
+                const visionFormData = new FormData();
+                visionFormData.append("image", selectedImage);
+                const visionRes = await fetch("/api/vision", { method: "POST", body: visionFormData });
+                if (!visionRes.ok) throw new Error("Vision analysis failed");
+                const visionData = await visionRes.json();
+                visionPrompt = `(Context from image: ${visionData.prompt}) `;
+                toast.success("Image analyzed!");
+            } catch (err) {
+                toast.error("Image analysis failed. Using text prompt only.");
             }
         }
 
@@ -686,37 +666,37 @@ Context: The user wants a website described as: "${prompt}".
 
             // Step 1: Header Agent
             // (Already working from init)
-            const headerData = await generateComponent("Header", "Create a premium, responsive navigation header with logo, navigation links, and a call-to-action button. Ensure it looks professional and modern.", selectedVibe, directImageBase64);
+            const headerData = await generateComponent("Header", "Create a premium, responsive navigation header with logo, navigation links, and a call-to-action button. Ensure it looks professional and modern.", selectedVibe);
             setParts(prev => ({ ...prev, header: headerData.body }));
             setAgentStates(prev => ({ ...prev, header: "completed", hero: "working" }));
             await new Promise(r => setTimeout(r, 800)); // Artificial pacing
 
             // Step 2: Hero Agent
-            const heroData = await generateComponent("Hero", "Create a high-converting hero section with a compelling headline, subheadline, and primary/secondary CTA buttons. Use a modern layout with plenty of whitespace. **IMPORTANT: Include a premium animated background using Vanta.js. Add a wrapper div with id='vanta-bg' and provide a script to initialize VANTA.NET or VANTA.WAVES on that element. Ensure the background fills the section and the content is readable on top.**", selectedVibe, directImageBase64);
+            const heroData = await generateComponent("Hero", "Create a high-converting hero section with a compelling headline, subheadline, and primary/secondary CTA buttons. Use a modern layout with plenty of whitespace. **IMPORTANT: Include a premium animated background using Vanta.js. Add a wrapper div with id='vanta-bg' and provide a script to initialize VANTA.NET or VANTA.WAVES on that element. Ensure the background fills the section and the content is readable on top.**", selectedVibe);
             setParts(prev => ({ ...prev, hero: heroData.body }));
             setAgentStates(prev => ({ ...prev, hero: "completed", features: "working" }));
             await new Promise(r => setTimeout(r, 800)); // Artificial pacing
 
             // Step 3: Features Agent
-            const featuresData = await generateComponent("Features", "Create a robust 'Features' section with a section title, subtitle, and a responsive grid of 3-6 feature cards. Each card must have a unique icon/emoji, bold title, and descriptive text. Use hover effects and proper spacing.", selectedVibe, directImageBase64);
+            const featuresData = await generateComponent("Features", "Create a robust 'Features' section with a section title, subtitle, and a responsive grid of 3-6 feature cards. Each card must have a unique icon/emoji, bold title, and descriptive text. Use hover effects and proper spacing.", selectedVibe);
             setParts(prev => ({ ...prev, features: featuresData.body }));
             setAgentStates(prev => ({ ...prev, features: "completed", testimonials: "working" }));
             await new Promise(r => setTimeout(r, 800)); // Artificial pacing
 
             // Step 4: Testimonials Agent (New)
-            const testimonialsData = await generateComponent("Testimonials", "Create a 'Testimonials' section (Social Proof). Include a section header and a grid/flex layout of 3 client review cards. Each card shows a quote, user avatar/emoji, name, and role. Make it trust-inspiring.", selectedVibe, directImageBase64);
+            const testimonialsData = await generateComponent("Testimonials", "Create a 'Testimonials' section (Social Proof). Include a section header and a grid/flex layout of 3 client review cards. Each card shows a quote, user avatar/emoji, name, and role. Make it trust-inspiring.", selectedVibe);
             setParts(prev => ({ ...prev, testimonials: testimonialsData.body }));
             setAgentStates(prev => ({ ...prev, testimonials: "completed", cta: "working" }));
             await new Promise(r => setTimeout(r, 800)); // Artificial pacing
 
             // Step 5: CTA Agent (New)
-            const ctaData = await generateComponent("CallToAction", "Create a high-impact 'Call to Action' (CTA) section. It should have a bold background color, a compelling headline asking the user to start now, and a large button. Ensure high contrast and center alignment.", selectedVibe, directImageBase64);
+            const ctaData = await generateComponent("CallToAction", "Create a high-impact 'Call to Action' (CTA) section. It should have a bold background color, a compelling headline asking the user to start now, and a large button. Ensure high contrast and center alignment.", selectedVibe);
             setParts(prev => ({ ...prev, cta: ctaData.body }));
             setAgentStates(prev => ({ ...prev, cta: "completed", footer: "working" }));
             await new Promise(r => setTimeout(r, 800)); // Artificial pacing
 
             // Step 6: Footer Agent
-            const footerData = await generateComponent("Footer", "Create a comprehensive website footer. Include multiple columns: Brand info (logo + text), Quick Links, Resources, and a Newsletter subscription form. Add copyright and social links at the bottom.", selectedVibe, directImageBase64);
+            const footerData = await generateComponent("Footer", "Create a comprehensive website footer. Include multiple columns: Brand info (logo + text), Quick Links, Resources, and a Newsletter subscription form. Add copyright and social links at the bottom.", selectedVibe);
             setParts(prev => ({ ...prev, footer: footerData.body }));
             setAgentStates(prev => ({ ...prev, footer: "completed", merge: "working" }));
             // Artificial delay for effect & merging

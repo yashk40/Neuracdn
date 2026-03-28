@@ -6,6 +6,7 @@ import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
 import { Toaster } from "sonner"
 import SmoothScroll from "@/components/SmoothScroll"
+import { UnregisterServiceWorkers } from "@/components/UnregisterServiceWorkers"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -44,6 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${poppins.variable} font-sans antialiased overflow-x-hidden`}>
+        <UnregisterServiceWorkers />
         {/* <SmoothScroll /> */}
         <AuthProvider>
           {children}

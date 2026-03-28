@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useLayoutEffect } from "react"
 import { gsap } from "gsap"
 import { Terminal, Code, Sparkles, Rocket, CheckCircle2, ChevronRight } from "lucide-react"
 
@@ -56,24 +56,65 @@ href="https://cdn.jsdelivr.net/gh/neuracdn/CDN@main/animation-1771189205835-u753
 
 export function CodePreview() {
   const [activeStep, setActiveStep] = useState(0)
-  const [progress, setProgress] = useState(0)
   const codeRef = useRef<HTMLDivElement>(null)
   const sectionRef = useRef<HTMLDivElement>(null)
-  const stepInterval = 6000 // 6 seconds per step
+  const progressRef = useRef(0)
+  const progressBarRef = useRef<HTMLDivElement>(null)
+  const pausedRef = useRef(true)
+  const lastTimeRef = useRef(performance.now())
+  const rafIdRef = useRef(0)
+  const stepMs = 6000
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          setActiveStep((s) => (s + 1) % codeSteps.length)
-          return 0
-        }
-        return prev + (100 / (stepInterval / 100))
-      })
-    }, 100)
+    const el = sectionRef.current
+    if (!el) return
 
-    return () => clearInterval(timer)
+    const tick = (now: number) => {
+      if (pausedRef.current) {
+        rafIdRef.current = 0
+        return
+      }
+      const dt = now - lastTimeRef.current
+      lastTimeRef.current = now
+      progressRef.current += (100 / stepMs) * dt
+      if (progressRef.current >= 100) {
+        setActiveStep((s) => (s + 1) % codeSteps.length)
+        progressRef.current = 0
+      }
+      const bar = progressBarRef.current
+      if (bar) bar.style.width = `${progressRef.current}%`
+      rafIdRef.current = requestAnimationFrame(tick)
+    }
+
+    const startLoop = () => {
+      if (rafIdRef.current) return
+      lastTimeRef.current = performance.now()
+      rafIdRef.current = requestAnimationFrame(tick)
+    }
+
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        pausedRef.current = !e.isIntersecting
+        if (e.isIntersecting) startLoop()
+        else if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current)
+          rafIdRef.current = 0
+        }
+      },
+      { rootMargin: "120px 0px", threshold: 0 }
+    )
+    obs.observe(el)
+
+    return () => {
+      obs.disconnect()
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current)
+    }
   }, [])
+
+  useLayoutEffect(() => {
+    const bar = progressBarRef.current
+    if (bar) bar.style.width = `${progressRef.current}%`
+  }, [activeStep])
 
   useEffect(() => {
     if (codeRef.current) {
@@ -87,7 +128,7 @@ export function CodePreview() {
   return (
     <section ref={sectionRef} className="relative py-24 lg:py-40 bg-background overflow-hidden">
       {/* Abstract Background Element */}
-      <div className="absolute top-0 right-0 w-1/2 h-full bg-primary/5 blur-[150px] -z-10 rounded-full translate-x-1/2" />
+      <div className="absolute top-0 right-0 w-1/2 h-full bg-primary/5 blur-3xl -z-10 rounded-full translate-x-1/2 pointer-events-none" />
 
       <div className="container mx-auto px-4 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -114,7 +155,8 @@ export function CodePreview() {
                     key={step.title}
                     onClick={() => {
                       setActiveStep(index)
-                      setProgress(0)
+                      progressRef.current = 0
+                      if (progressBarRef.current) progressBarRef.current.style.width = "0%"
                     }}
                     className={`group relative w-full text-left p-4 sm:p-6 rounded-2xl border transition-all duration-500 overflow-hidden ${activeStep === index
                       ? "border-primary/30 bg-primary/[0.03] shadow-lg shadow-primary/5"
@@ -124,8 +166,9 @@ export function CodePreview() {
                     {/* Progress Bar Background */}
                     {activeStep === index && (
                       <div
-                        className="absolute bottom-0 left-0 h-[2px] bg-primary transition-all duration-100 ease-linear"
-                        style={{ width: `${progress}%` }}
+                        ref={progressBarRef}
+                        className="absolute bottom-0 left-0 h-[2px] bg-primary ease-linear"
+                        style={{ width: 0 }}
                       />
                     )}
 
@@ -157,9 +200,9 @@ export function CodePreview() {
             {/* Right: Glass Terminal */}
             <div className="relative">
               {/* Decorative Glows */}
-              <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-[3rem] -z-10" />
+              <div className="absolute -inset-4 bg-primary/10 blur-2xl rounded-[3rem] -z-10 pointer-events-none" />
 
-              <div className="rounded-2xl border border-border/50 bg-card/40 backdrop-blur-2xl shadow-2xl overflow-hidden glass-terminal">
+              <div className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-md shadow-xl overflow-hidden glass-terminal">
                 {/* Terminal Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 bg-muted/20">
                   <div className="flex gap-2">
@@ -215,8 +258,8 @@ export function CodePreview() {
               </div>
 
               {/* Float Decorations */}
-              <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl animate-pulse" />
-              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
+              <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 rounded-full blur-xl pointer-events-none" />
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
             </div>
 
           </div>
