@@ -33,7 +33,6 @@ import {
   Lock,
   Trash2,
 } from "lucide-react";
-import WebsiteBuilder from "@/components/WebsiteBuilder";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -88,7 +87,14 @@ export default function HomePage() {
   const [cssCode, setCssCode] = useState("");
   const [scriptCode, setScriptCode] = useState("");
   const [framework, setFramework] = useState<"css" | "tailwind" | "bootstrap">("css");
-  const [selectedModel, setSelectedModel] = useState<"llama-3.3-70b-versatile" | "gpt-4o-mini" | "nvidia/step-3.5-flash">("gpt-4o-mini");
+  const [selectedModel, setSelectedModel] = useState<
+    "llama-3.3-70b-versatile" | 
+    "meta/llama-4-maverick-17b-128e-instruct" | 
+    "meta/llama-3.3-70b-instruct" |
+    "qwen/qwen2.5-coder-32b-instruct" |
+    "nvidia/step-3.5-flash" |
+    "google/gemma-3-27b-it"
+  >("llama-3.3-70b-versatile");
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
@@ -102,7 +108,7 @@ export default function HomePage() {
   const [pendingFramework, setPendingFramework] = useState<"css" | "tailwind" | "bootstrap" | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<"generator" | "showcase" | "website-beta">("generator");
+  const [currentView, setCurrentView] = useState<"generator" | "showcase">("generator");
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const [selectedWebsite, setSelectedWebsite] = useState<any | null>(null);
   const [viewingWebsite, setViewingWebsite] = useState<any | null>(null);
@@ -638,18 +644,18 @@ export default function HomePage() {
         ::-webkit-scrollbar-thumb { background: #d4d0c8; border-radius: 8px; }
         
         .glass-card {
-          background: rgba(255,255,255,0.72);
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(255,255,255,0.9);
-          box-shadow: 0 2px 32px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.8) inset;
+          background: rgba(255,255,255,0.88);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,0.95);
+          box-shadow: 0 2px 24px rgba(0,0,0,0.05), 0 1px 0 rgba(255,255,255,0.8) inset;
         }
         
         .nav-pill {
-          background: rgba(255,255,255,0.5);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255,255,255,0.8);
-          box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+          background: rgba(255,255,255,0.82);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.9);
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
         }
         
         .btn-primary {
@@ -722,21 +728,17 @@ export default function HomePage() {
           {[
             { id: "generator", icon: Zap, label: "Generator" },
             { id: "showcase", icon: LayoutGrid, label: "Showcase" },
-            { id: "website-beta", icon: Bot, label: "Website Builder", badge: true },
           ].map((item) => (
             <button
               key={item.id}
-              onClick={() => setCurrentView(item.id as any)}
+              onClick={() => setCurrentView(item.id as "generator" | "showcase")}
               title={item.label}
-              className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300 ${currentView === item.id
-                ? "bg-black text-white shadow-lg shadow-black/20"
-                : "text-zinc-400 hover:bg-white hover:text-zinc-700 hover:shadow-md"
+              className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 ${currentView === item.id
+                ? "bg-black text-white shadow-md shadow-black/15"
+                : "text-zinc-400 hover:bg-white hover:text-zinc-700 hover:shadow-sm"
                 }`}
             >
               <item.icon className="w-4.5 h-4.5" style={{ width: '18px', height: '18px' }} />
-              {item.badge && (
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-[#f4f3f0] pulse-dot" />
-              )}
             </button>
           ))}
           <div className="w-6 h-px bg-zinc-200" />
@@ -759,7 +761,7 @@ export default function HomePage() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden md:pl-24 bg-[#f4f3f0]">
 
         {/* TOP HEADER */}
-        <header className="h-20 flex items-center px-5 md:px-8 shrink-0 z-40 sticky top-0 bg-[#f4f3f0]/90 backdrop-blur-sm">
+        <header className="h-20 flex items-center px-5 md:px-8 shrink-0 z-40 sticky top-0 bg-[#f4f3f0] border-b border-zinc-200/40">
           <div className="w-full nav-pill rounded-[20px] h-14 flex items-center justify-between px-4 md:px-5">
             {/* User pill */}
             <div className="flex items-center gap-3">
@@ -791,7 +793,7 @@ export default function HomePage() {
                 <span className="hidden sm:inline ml-2">Components</span>
               </button>
               <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-100 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                 <span className="text-[10px] font-bold text-green-600 tracking-wide hidden sm:block">LIVE</span>
               </div>
               <div className="text-[10px] font-semibold text-zinc-400 bg-white/60 px-3 py-1.5 rounded-full border border-zinc-100 hidden lg:block">
@@ -802,14 +804,7 @@ export default function HomePage() {
         </header>
 
         {/* SCROLL AREA */}
-        <div className="flex-1 px-5 md:px-8 pb-28 md:pb-10 pt-6 space-y-5 overflow-y-auto overflow-x-hidden scroll-smooth w-full mx-auto">
-
-          {/* ── WEBSITE BETA VIEW ── */}
-          {currentView === "website-beta" && (
-            <div className="slide-up h-[calc(100vh-140px)] min-h-[600px]">
-              <WebsiteBuilder />
-            </div>
-          )}
+        <div className="flex-1 px-5 md:px-8 pb-28 md:pb-10 pt-6 space-y-5 overflow-y-auto overflow-x-hidden scroll-smooth w-full mx-auto overscroll-contain">
 
           {/* ── GENERATOR VIEW ── */}
           {currentView === "generator" && (
@@ -870,7 +865,17 @@ export default function HomePage() {
                     >
                       <Bot className="absolute left-3.5 text-zinc-400 pointer-events-none" style={{ width: '14px', height: '14px' }} />
                       <span className="truncate">
-                        {selectedModel === "gpt-4o-mini" ? "GPT-4o-mini" : selectedModel === "llama-3.3-70b-versatile" ? "Llama 3.3" : selectedModel === "nvidia/step-3.5-flash" ? "Step 3.5 Flash" : "Select Model"}
+                        {(() => {
+                          switch (selectedModel) {
+                            case "llama-3.3-70b-versatile": return "Llama 3.3 (Groq)";
+                            case "meta/llama-4-maverick-17b-128e-instruct": return "Llama 4 Maverick";
+                            case "meta/llama-3.3-70b-instruct": return "Llama 3.3 (NVIDIA)";
+                            case "qwen/qwen2.5-coder-32b-instruct": return "Qwen 2.5 Coder";
+                            case "nvidia/step-3.5-flash": return "Step 3.5 Flash";
+                            case "google/gemma-3-27b-it": return "Gemma 3";
+                            default: return "Select Model";
+                          }
+                        })()}
                       </span>
                       <ChevronRight
                         className={`absolute right-3 text-zinc-300 pointer-events-none transition-transform duration-200 ${isModelDropdownOpen ? "-rotate-90" : "rotate-90"}`}
@@ -880,21 +885,39 @@ export default function HomePage() {
 
                     {/* Dropdown Menu */}
                     {isModelDropdownOpen && (
-                      <div className="absolute top-full mt-2 left-0 w-full bg-white border border-zinc-100 rounded-[14px] shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
-                        <div className="p-1">
+                      <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-zinc-100 rounded-[14px] shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
+                        <div className="max-h-[350px] overflow-y-auto p-1 custom-scrollbar">
                           {[
-                          
-                            { id: "llama-3.3-70b-versatile", label: "Llama 3.3", desc: "Open Source" },
-                            { id: "nvidia/step-3.5-flash", label: "Step 3.5 Flash", desc: "Fast & Smart" }
-                          ].map((model) => (
-                            <button
-                              key={model.id}
-                              onClick={() => { setSelectedModel(model.id as any); setIsModelDropdownOpen(false); }}
-                              className={`w-full text-left px-3 py-2.5 rounded-[10px] text-xs transition-colors flex items-center justify-between group ${selectedModel === model.id ? "bg-zinc-50 text-zinc-900 font-bold" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"}`}
-                            >
-                              <span>{model.label}</span>
-                              {selectedModel === model.id && <CheckCircle style={{ width: '12px', height: '12px', color: '#10b981' }} />}
-                            </button>
+                            { group: "Recommended", models: [
+                              { id: "llama-3.3-70b-versatile", label: "Llama 3.3", desc: "Fast (Groq)" },
+                              { id: "meta/llama-4-maverick-17b-128e-instruct", label: "Llama 4 Maverick", desc: "Best coding" },
+                              { id: "qwen/qwen2.5-coder-32b-instruct", label: "Qwen 2.5 Coder", desc: "Coding Focus" },
+                            ]},
+                            { group: "NVIDIA NIM", models: [
+                              { id: "meta/llama-3.3-70b-instruct", label: "Llama 3.3", desc: "NIM" },
+                              { id: "nvidia/step-3.5-flash", label: "Step 3.5 Flash", desc: "Flash" },
+                              { id: "google/gemma-3-27b-it", label: "Gemma 3", desc: "Latest Google" },
+                            ]}
+                          ].map((group) => (
+                            <div key={group.group} className="mb-2 last:mb-0">
+                              <div className="px-3 py-1 text-[9px] font-bold text-zinc-400 uppercase tracking-widest">{group.group}</div>
+                              {group.models.map((model) => (
+                                <button
+                                  key={model.id}
+                                  onClick={() => {
+                                    setSelectedModel(model.id as any);
+                                    setIsModelDropdownOpen(false);
+                                  }}
+                                  className={`w-full text-left px-3 py-2 rounded-[10px] text-xs transition-colors flex items-center justify-between group ${selectedModel === model.id ? "bg-zinc-50 text-zinc-900 font-bold" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"}`}
+                                >
+                                  <div className="flex flex-col">
+                                    <span>{model.label}</span>
+                                    <span className="text-[9px] font-medium opacity-60 group-hover:opacity-100">{model.desc}</span>
+                                  </div>
+                                  {selectedModel === model.id && <CheckCircle style={{ width: '12px', height: '12px', color: '#10b981' }} />}
+                                </button>
+                              ))}
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -1948,15 +1971,14 @@ export default function HomePage() {
       )}
 
       {/* ─── MOBILE BOTTOM NAV ─── */}
-      <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-[#18181b] p-1.5 rounded-full shadow-2xl shadow-black/20 border border-zinc-700/50 backdrop-blur-md">
+      <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-[#18181b] p-1.5 rounded-full shadow-xl shadow-black/15 border border-zinc-700/50">
         {[
           { id: "generator", icon: Brain, label: "Create" },
           { id: "showcase", icon: LayoutGrid, label: "Library" },
-          { id: "website-beta", icon: Monitor, label: "Site" }
         ].map((item) => (
           <button
             key={item.id}
-            onClick={() => setCurrentView(item.id as any)}
+            onClick={() => setCurrentView(item.id as "generator" | "showcase")}
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${currentView === item.id
               ? "bg-zinc-800 text-white"
               : "text-zinc-500 hover:text-zinc-300"

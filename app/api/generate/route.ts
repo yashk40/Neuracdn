@@ -2,6 +2,42 @@ import { type NextRequest, NextResponse } from "next/server"
 import { Groq } from "groq-sdk";
 import { OpenAI } from "openai";
 
+const NVIDIA_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+
+type NvidiaMessage = { role: "system" | "user" | "assistant"; content: string };
+
+/** Direct HTTP call — matches Python `requests.post`; avoids OpenAI SDK quirks + surfaces real error bodies on 404. */
+async function nvidiaChatCompletions(
+    apiKey: string | undefined,
+    body: Record<string, unknown>
+): Promise<{ choices?: Array<{ message?: { content?: string } }> }> {
+    if (!apiKey?.trim()) {
+        throw new Error("NVIDIA_API_KEY is not set in .env");
+    }
+    const res = await fetch(NVIDIA_CHAT_URL, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        },
+        body: JSON.stringify({ ...body, stream: false }),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+        let detail = text || res.statusText;
+        try {
+            const j = JSON.parse(text) as { error?: { message?: string }; message?: string };
+            detail = j.error?.message || j.message || detail;
+        } catch {
+            /* keep text */
+        }
+        console.error("[nvidiaChatCompletions]", res.status, detail.slice(0, 500));
+        throw new Error(`NVIDIA API ${res.status}: ${detail}`);
+    }
+    return JSON.parse(text) as { choices?: Array<{ message?: { content?: string } }> };
+}
+
 const systemPrompts = {
     // ... (previous content not shown)
     css: `
@@ -78,17 +114,17 @@ Your goal is to generate a premium, production-ready UI component using **Bootst
 `
 };
 
-const groq = new Groq({
-    apiKey: process.env.GROQ_APII_KEY,
-});
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+function getGroq() {
+    const key = process.env.GROQ_API_KEY || process.env.GROQ_APII_KEY;
+    if (!key) {
+        throw new Error("GROQ_API_KEY (or GROQ_APII_KEY) is not set for Llama 3.3");
+    }
+    return new Groq({ apiKey: key });
+}
 
 export async function POST(request: NextRequest) {
     try {
-        const { prompt, framework, model, image } = await request.json()
+        const { prompt, framework, model } = await request.json()
 
         if (!prompt) {
             return NextResponse.json({ error: "Missing prompt" }, { status: 400 })
@@ -98,31 +134,7 @@ export async function POST(request: NextRequest) {
 
         let generatedCode = "";
 
-        if (model === "gpt-4o-mini") {
-            const messages: any[] = [
-                { role: "system", content: systemPrompt }
-            ];
-
-            if (image) {
-                messages.push({
-                    role: "user",
-                    content: [
-                        { type: "text", text: prompt },
-                        { type: "image_url", image_url: { url: image } }
-                    ]
-                });
-            } else {
-                messages.push({ role: "user", content: prompt });
-            }
-
-            const completion = await openai.chat.completions.create({
-                messages: messages,
-                model: "gpt-4o-mini",
-                temperature: 0.7,
-                max_tokens: 4000,
-            });
-            generatedCode = completion.choices[0]?.message?.content || "";
-        } else if (model === "openrouter/aurora-alpha") {
+        if (model === "openrouter/aurora-alpha") {
             // OpenRouter (Aurora Alpha with Reasoning)
             try {
                 const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -187,9 +199,53 @@ export async function POST(request: NextRequest) {
                 console.error("NVIDIA API Error:", err);
                 throw new Error(err.message || "Failed to generate with GLM-5");
             }
+        } else if (
+            model === "meta/llama-4-maverick-17b-128e-instruct" ||
+            model === "meta/llama-3.3-70b-instruct" ||
+            model === "qwen/qwen2.5-coder-32b-instruct" ||
+            model === "google/gemma-3-27b-it"
+        ) {
+            try {
+                // Use .env key exclusively (requested by user)
+                const nvidiaApiKey = process.env.NVIDIA_API_KEY;
+                
+                const data = await nvidiaChatCompletions(nvidiaApiKey, {
+                    model: model,
+                    messages: [
+                        {
+                            role: "user",
+                            content: `${systemPrompt}\n\n---\n\n${prompt}`,
+                        },
+                    ],
+                    max_tokens: 8192,
+                    temperature: 0.7,
+                    top_p: 1,
+                });
+                generatedCode = data.choices?.[0]?.message?.content || "";
+            } catch (err: any) {
+                console.error(`NVIDIA Model Error (${model}):`, err);
+                throw err instanceof Error ? err : new Error(String(err));
+            }
+        } else if (model === "nvidia/step-3.5-flash") {
+            try {
+                const data = await nvidiaChatCompletions(process.env.NVIDIA_API_KEY, {
+                    model: "stepfun-ai/step-3.5-flash",
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: prompt },
+                    ],
+                    temperature: 0.7,
+                    top_p: 1,
+                    max_tokens: 16384,
+                });
+                generatedCode = data.choices?.[0]?.message?.content || "";
+            } catch (err: any) {
+                console.error("NVIDIA Step 3.5 Flash Error:", err);
+                throw err instanceof Error ? err : new Error(String(err));
+            }
         } else {
             // Default to Groq (Llama)
-            const chatCompletion = await groq.chat.completions.create({
+            const chatCompletion = await getGroq().chat.completions.create({
                 messages: [
                     {
                         role: "system",
